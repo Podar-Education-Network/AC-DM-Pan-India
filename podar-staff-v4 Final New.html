@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Podar Staff Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --c:#f5f0e8;--c2:#ede7d9;--c3:#ddd5c5;--c4:#cec4b0;
+  --sur:#fff;--sur2:#faf8f4;
+  --ink:#1c160e;--ink2:#4a4038;--ink3:#8a7d6e;--ink4:#b5a898;
+  --navy:#0f2044;--navy2:#1a3360;
+  --ora:#f47920;--ora2:#e06810;--ora3:#fdf0e6;
+  --grn:#2d6a4f;--grn2:#d8f3dc;--grn3:#95d5b2;
+  --red:#b91c1c;--red2:#fee2e2;--red3:#fca5a5;
+  --blu:#1e40af;--blu2:#dbeafe;--blu3:#93c5fd;
+  --amb:#92400e;--amb2:#fef3c7;--amb3:#fcd34d;
+  --pur:#5b21b6;--pur2:#ede9fe;--pur3:#c4b5fd;
+  --fn:'DM Sans',sans-serif;--sf:'Playfair Display',serif;
+  --r:10px;--rl:16px;--rxl:22px;
+  --sh:0 1px 3px rgba(28,22,14,.06),0 0 0 1px rgba(28,22,14,.04);
+  --shm:0 8px 32px rgba(15,32,68,.1),0 0 0 1px rgba(28,22,14,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;line-height:1.65;min-height:100vh}
+
+/* ── LOGIN SCREEN ── */
+.login-wrap{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:0}
+.login-wrap.hidden{display:none}
+.login-box{background:var(--sur);border-radius:var(--rxl);width:420px;max-width:94vw;padding:36px;box-shadow:0 32px 80px rgba(0,0,0,.4);animation:pop .3s cubic-bezier(.34,1.4,.64,1)}
+@keyframes pop{from{transform:scale(.92) translateY(16px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-mark{width:38px;height:38px;background:var(--ora);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--sf);font-size:18px;color:#fff;font-weight:700}
+.login-title{font-family:var(--sf);font-size:22px;font-weight:600;color:var(--navy)}
+.login-sub{font-size:12px;color:var(--ink3);margin-top:2px}
+.login-roles{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.role-btn{padding:14px 16px;border-radius:var(--rl);border:1.5px solid var(--c3);cursor:pointer;font-family:var(--fn);text-align:left;background:var(--sur2);transition:all .15s}
+.role-btn:hover{border-color:var(--ora);background:var(--ora3)}
+.role-btn.selected{border-color:var(--ora);background:var(--ora3)}
+.role-btn-title{font-size:13px;font-weight:600;color:var(--ink)}
+.role-btn-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.login-pw{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.login-pw label{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em}
+.login-pw input{padding:10px 12px;border:1.5px solid var(--c3);border-radius:var(--r);font-family:var(--fn);font-size:14px;color:var(--ink);background:var(--sur);outline:none;transition:border-color .15s}
+.login-pw input:focus{border-color:var(--ora);box-shadow:0 0 0 3px rgba(244,121,32,.1)}
+.login-err{font-size:12px;color:var(--red);background:var(--red2);border:1px solid var(--red3);border-radius:var(--r);padding:8px 12px;display:none}
+.login-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.login-btn:hover{background:var(--navy2)}
+
+/* ── LOADING ── */
+.loading-screen{position:fixed;inset:0;background:var(--c);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:180}
+.loading-screen.hidden{display:none}
+.spinner{width:32px;height:32px;border:3px solid var(--c3);border-top-color:var(--ora);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--ink3)}
+
+/* ── NAV ── */
+.nav{background:var(--navy);height:54px;display:flex;align-items:center;padding:0 28px;gap:0;position:sticky;top:0;z-index:60;border-bottom:1px solid rgba(255,255,255,.06)}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-right:32px;flex-shrink:0}
+.nav-mark{width:30px;height:30px;background:var(--ora);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--sf);font-size:14px;color:#fff;font-weight:700}
+.nav-name{font-size:13px;font-weight:600;color:#fff;letter-spacing:-.2px}
+.nav-links{display:flex;height:54px}
+.nl{padding:0 14px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.45);cursor:pointer;border:none;background:none;font-family:var(--fn);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.nl:hover{color:rgba(255,255,255,.8)}.nl.on{color:#fff;border-bottom-color:var(--ora)}
+.nl.hidden{display:none}
+.nav-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nav-srch{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 14px}
+.nav-srch input{border:none;background:transparent;outline:none;font-size:12px;color:#fff;font-family:var(--fn);width:170px}
+.nav-srch input::placeholder{color:rgba(255,255,255,.3)}
+.role-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.rb-view{background:rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
+.rb-tl{background:var(--ora);color:#fff}
+.rb-dm{background:var(--blu);color:#fff}
+.nbadge{background:var(--ora);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:4px}
+.nav-logout{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);cursor:pointer;font-family:var(--fn)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:1.5px solid var(--c3);cursor:pointer;font-family:var(--fn);font-size:13px;font-weight:500;transition:all .15s;background:var(--sur);color:var(--ink2)}
+.btn:hover{background:var(--c);border-color:var(--c4)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-n{background:var(--navy);color:#fff;border-color:var(--navy)}.btn-n:hover{background:var(--navy2);border-color:var(--navy2);color:#fff}
+.btn-o{background:var(--ora);color:#fff;border-color:var(--ora)}.btn-o:hover{background:var(--ora2);border-color:var(--ora2);color:#fff}
+.btn-s{padding:5px 12px;font-size:12px}
+.btn-d{background:var(--red2);color:var(--red);border-color:var(--red3)}
+.btn-g{background:var(--grn2);color:var(--grn);border-color:var(--grn3)}
+.btn-locked{opacity:.3;cursor:not-allowed;pointer-events:none}
+
+/* ── LAYOUT ── */
+.pg{display:none;padding:32px 28px;max-width:1200px;margin:0 auto}.pg.on{display:block}
+.tb{display:flex;align-items:center;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.pg-title{font-family:var(--sf);font-size:26px;font-weight:600;color:var(--navy);letter-spacing:-.5px}
+.mla{margin-left:auto}
+.fsel{background:var(--sur);border:1.5px solid var(--c3);border-radius:var(--r);padding:7px 11px;font-family:var(--fn);font-size:12px;color:var(--ink);cursor:pointer;outline:none}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px}
+.stat{background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);padding:18px 20px;box-shadow:var(--sh);position:relative;overflow:hidden;cursor:pointer;transition:all .15s}
+.stat:hover{box-shadow:var(--shm)}
+.stat-bar{position:absolute;top:0;left:0;right:0;height:3px}
+.stat-val{font-family:var(--sf);font-size:30px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:12px;color:var(--ink3);font-weight:500}
+
+/* ── ALERT ── */
+.alert-box{display:flex;align-items:center;gap:14px;background:var(--amb2);border:1.5px solid var(--amb3);border-radius:var(--rl);padding:14px 18px;margin-bottom:22px}
+.alert-n{font-family:var(--sf);font-size:30px;font-weight:700;color:var(--amb);line-height:1}
+
+/* ── SCHOOL CARDS ── */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(390px,1fr));gap:18px}
+.scard{background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--sh)}
+.scard:hover{transform:translateY(-2px);box-shadow:var(--shm)}
+.scard.flag{border-top:3px solid var(--amb)}
+.sc-head{padding:16px 18px 12px;border-bottom:1px solid var(--c2)}
+.sc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.sc-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.4}
+.sc-loc{font-size:11px;color:var(--ink4);margin-top:2px}
+.sc-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sc-body{padding:12px 18px;display:flex;flex-direction:column;gap:7px}
+.sc-tl-bar{padding:8px 18px;background:var(--sur2);border-top:1px solid var(--c2);font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:6px}
+.sc-flag{padding:8px 18px;border-top:1px solid;font-size:11px;font-weight:500;display:flex;align-items:center;gap:6px}
+.sc-flag.amb{background:var(--amb2);border-color:var(--amb3);color:var(--amb)}
+.srow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r);background:var(--sur2);border:1px solid var(--c2)}
+.sav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.av-ac{background:#dcfce7;color:var(--grn)}.av-dm{background:var(--blu2);color:var(--blu)}.av-fd{background:var(--pur2);color:var(--pur)}.av-v{background:var(--c2);color:var(--ink4)}
+.srow-info{flex:1;min-width:0}
+.srow-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow-meta{font-size:10px;color:var(--ink4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.03em;flex-shrink:0}
+.r-ac{background:#dcfce7;color:var(--grn)}.r-dm{background:var(--blu2);color:var(--blu)}.r-fd{background:var(--pur2);color:var(--pur)}.r-tl{background:var(--ora3);color:var(--ora2)}.r-v{background:var(--c2);color:var(--ink4)}
+.stag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.st-ac{background:#dcfce7;color:var(--grn);border:1px solid var(--grn3)}.st-dm{background:var(--blu2);color:var(--blu);border:1px solid var(--blu3)}.st-v{background:var(--red2);color:var(--red);border:1px solid var(--red3)}
+.fb-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.fb-on{background:var(--blu2);color:var(--blu)}.fb-off{background:var(--c2);color:var(--ink4)}
+.allow-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.allow-on{background:var(--blu)}.allow-off{background:var(--c3)}
+
+/* ── MODAL ── */
+.ov{position:fixed;inset:0;background:rgba(28,22,14,.55);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.ov.open{display:flex}
+.modal{background:var(--sur);border-radius:var(--rxl);width:640px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(15,32,68,.22);animation:pop .22s cubic-bezier(.34,1.4,.64,1)}
+.modal.wide{width:860px}
+.mh{padding:24px 26px 0;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.mt{font-family:var(--sf);font-size:20px;font-weight:600;color:var(--navy)}
+.ms{font-size:12px;color:var(--ink4);margin-top:3px}
+.mc{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--c3);background:var(--c);cursor:pointer;font-size:13px;color:var(--ink3);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.mc:hover{background:var(--c3)}
+.mb{padding:0 26px 26px}
+.mf{padding:14px 26px;border-top:1px solid var(--c2);display:flex;gap:8px;justify-content:flex-end;background:var(--sur2);border-radius:0 0 var(--rxl) var(--rxl)}
+
+/* ── FORMS ── */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.fl{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em}
+.fi,.fs{padding:9px 12px;border:1.5px solid var(--c3);border-radius:var(--r);font-family:var(--fn);font-size:13px;color:var(--ink);background:var(--sur);outline:none;transition:border-color .15s;width:100%}
+.fi:focus,.fs:focus{border-color:var(--ora);box-shadow:0 0 0 3px rgba(244,121,32,.1)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fnote{padding:10px 13px;border-radius:var(--r);font-size:12px;margin-top:2px}
+.fn-a{background:var(--amb2);border:1.5px solid var(--amb3);color:var(--amb)}
+.fn-b{background:var(--blu2);border:1.5px solid var(--blu3);color:var(--blu)}
+.fn-g{background:var(--grn2);border:1.5px solid var(--grn3);color:var(--grn)}
+
+/* ── DETAIL TABS ── */
+.dtabs{display:flex;gap:2px;background:var(--c2);border-radius:10px;padding:4px;margin-bottom:20px}
+.dtab{flex:1;padding:7px 5px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;color:var(--ink3);text-align:center;border:none;background:transparent;font-family:var(--fn);transition:all .15s}
+.dtab.on{background:var(--sur);color:var(--ink);box-shadow:var(--sh);font-weight:600}
+
+/* ── PROFILE CARDS ── */
+.prof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
+.pcard{background:var(--sur2);border:1.5px solid var(--c3);border-radius:var(--rl);padding:18px}
+.pcard.vacant{border-style:dashed}
+.pcard-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pcard-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:8px}
+.pcard-name{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.pcard-det{border-top:1px solid var(--c3);padding-top:10px;margin-top:4px}
+.pdr{display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--c2);font-size:12px}
+.pdr:last-child{border-bottom:none}
+.pdr-l{color:var(--ink4);min-width:90px;flex-shrink:0;font-size:11px;margin-top:1px}
+.pdr-v{color:var(--ink);flex:1;word-break:break-all}
+.pdr-v a{color:var(--blu);text-decoration:none}
+
+/* ── TIMELINE ── */
+.tl{padding-left:22px;position:relative}
+.tl::before{content:'';position:absolute;left:4px;top:12px;bottom:12px;width:1.5px;background:var(--c3)}
+.tli{position:relative;margin-bottom:13px}
+.tli-dot{position:absolute;left:-19px;top:6px;width:10px;height:10px;border-radius:50%;border:2px solid var(--sur);box-shadow:0 0 0 1.5px currentColor}
+.tli-j{background:var(--grn);color:var(--grn)}.tli-l{background:var(--red);color:var(--red)}.tli-sys{background:var(--ink3);color:var(--ink3)}
+.tli-card{background:var(--sur2);border:1px solid var(--c3);border-radius:var(--r);padding:11px 14px}
+.tli-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.tli-name{font-size:13px;font-weight:600}
+.tli-date{font-size:11px;color:var(--ink4);margin-left:auto}
+.tli-by{font-size:11px;color:var(--ora);font-weight:600}
+.tli-note{font-size:12px;color:var(--ink2);margin-bottom:4px}
+.tli-links{display:flex;gap:12px;flex-wrap:wrap}
+.tli-link{font-size:11px;color:var(--blu)}
+
+/* ── TRAINING ── */
+.tr-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--sur2);border:1px solid var(--c3);border-radius:var(--r);margin-bottom:8px}
+.tr-left{display:flex;align-items:center;gap:10px}
+.tr-icon{width:32px;height:32px;border-radius:8px;background:var(--c2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tr-name{font-size:13px;font-weight:500;color:var(--ink)}
+.tr-date{font-size:11px;color:var(--ink4);margin-top:2px}
+.tr-right{display:flex;align-items:center;gap:8px}
+.tst{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.tst-d{background:var(--grn2);color:var(--grn)}.tst-p{background:var(--amb2);color:var(--amb)}.tst-n{background:var(--c2);color:var(--ink4)}
+
+/* ── FB SECTION ── */
+.fb-box{background:var(--blu2);border:1.5px solid var(--blu3);border-radius:var(--rl);padding:16px 18px}
+.fb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.fb-title{font-size:14px;font-weight:600;color:var(--blu)}
+.fb-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(147,197,253,.3);font-size:12px}
+.fb-row:last-child{border-bottom:none}
+.fb-rl{color:var(--blu);opacity:.7;min-width:88px;font-size:11px}
+.fb-rv{color:var(--navy);flex:1}
+.fb-rv a{color:var(--blu)}
+.fb-tick{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.fb-tick-y{background:var(--grn);color:#fff}.fb-tick-n{background:var(--c3);color:var(--ink4)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.06em;border-bottom:1.5px solid var(--c3);background:var(--sur2)}
+.tbl td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--c2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--sur2)}
+
+/* ── REQUESTS ── */
+.rcard{background:var(--sur);border:1.5px solid var(--amb3);border-radius:var(--rl);padding:16px 18px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;box-shadow:var(--sh)}
+.ricon{width:38px;height:38px;border-radius:9px;background:var(--amb2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:56px 24px;color:var(--ink4)}
+.empty-icon{font-size:38px;margin-bottom:10px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;border-radius:var(--rl);padding:12px 18px;font-size:13px;font-weight:500;z-index:300;box-shadow:0 8px 32px rgba(15,32,68,.3);animation:tin .25s cubic-bezier(.34,1.4,.64,1);max-width:340px}
+@keyframes tin{from{transform:translateY(12px);opacity:0}}
+
+/* ── SAVING INDICATOR ── */
+.saving{position:fixed;top:64px;right:20px;background:var(--navy);color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;z-index:150;display:none;align-items:center;gap:6px}
+.saving.show{display:flex}
+.saving-dot{width:8px;height:8px;border-radius:50%;background:var(--ora);animation:pulse 1s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-mark">P</div>
+      <div>
+        <div class="login-title">Podar Staff Manager</div>
+        <div class="login-sub">Head Office — Internal Tool</div>
+      </div>
+    </div>
+    <div class="login-roles">
+      <button class="role-btn" onclick="selectRole('view',this)">
+        <div class="role-btn-title">&#128065; HO Marketing Staff</div>
+        <div class="role-btn-sub">View all data — click to enter, no password needed</div>
+      </button>
+      <button class="role-btn" onclick="selectRole('tl',this)">
+        <div class="role-btn-title">&#128100; Team Leader</div>
+        <div class="role-btn-sub">Manage AC and FDE data</div>
+      </button>
+      <button class="role-btn" onclick="selectRole('dm',this)">
+        <div class="role-btn-title">&#128225; DM Admin (Harshal)</div>
+        <div class="role-btn-sub">Manage DM, training, allowance, Facebook</div>
+      </button>
+    </div>
+    <div class="login-pw" id="pw-wrap" style="display:none">
+      <label>Password</label>
+      <input type="password" id="pw-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="login-err" id="login-err">Incorrect password. Please try again.</div>
+    <button class="login-btn" onclick="doLogin()" id="login-btn" style="display:none">Login &#8594;</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="load-text">Loading...</div>
+</div>
+
+<!-- SAVING INDICATOR -->
+<div class="saving" id="saving-ind">
+  <div class="saving-dot"></div>
+  Saving to Google Sheets...
+</div>
+
+<!-- NAV -->
+<nav class="nav" id="main-nav" style="display:none">
+  <div class="nav-brand">
+    <div class="nav-mark">P</div>
+    <span class="nav-name">Podar Staff Manager</span>
+  </div>
+  <div class="nav-links">
+    <button class="nl on" onclick="gp('dashboard',this)">Dashboard</button>
+    <button class="nl" onclick="gp('schools',this)">Schools</button>
+    <button class="nl" onclick="gp('training',this)">Training<span id="trb" class="nbadge">0</span></button>
+    <button class="nl" onclick="gp('allowance',this)">DM Allowance</button>
+    <button class="nl" id="nl-fb" onclick="gp('facebook',this)">Facebook</button>
+    <button class="nl" onclick="gp('requests',this)">Requests<span id="rqb" class="nbadge">0</span></button>
+    <button class="nl" onclick="gp('audit',this)">Audit Log</button>
+  </div>
+  <div class="nav-r">
+    <div class="nav-srch">
+      <span style="color:rgba(255,255,255,.3);font-size:11px">&#9906;</span>
+      <input id="gsrch" placeholder="Search school or staff..." oninput="doSearch(this.value)"/>
+    </div>
+    <span class="role-badge" id="role-badge">View</span>
+    <button class="nav-logout" onclick="doLogout()">Logout</button>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="pg-dashboard" class="pg on">
+  <div class="tb">
+    <div class="pg-title">Dashboard</div>
+    <div style="font-size:12px;color:var(--ink3)" id="dddate"></div>
+    <div class="mla" id="dash-actions" style="display:none">
+      <button class="btn btn-n btn-s" onclick="openAddSch()">+ Add School</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-bar" style="background:var(--navy)"></div><div class="stat-val" style="color:var(--navy)" id="s1">0</div><div class="stat-lbl">Total Schools</div></div>
+    <div class="stat"><div class="stat-bar" style="background:var(--ora)"></div><div class="stat-val" style="color:var(--ora)" id="s2">0</div><div class="stat-lbl">Schools with AC</div></div>
+    <div class="stat"><div class="stat-bar" style="background:var(--blu)"></div><div class="stat-val" style="color:var(--blu)" id="s3">0</div><div class="stat-lbl">DM Allowance Active</div></div>
+    <div class="stat"><div class="stat-bar" style="background:var(--red)"></div><div class="stat-val" style="color:var(--red)" id="s4">0</div><div class="stat-lbl">Need Attention</div></div>
+    <div class="stat"><div class="stat-bar" style="background:var(--amb)"></div><div class="stat-val" style="color:var(--amb)" id="s5">0</div><div class="stat-lbl">Training Pending</div></div>
+  </div>
+  <div id="dalert"></div>
+  <div class="tb"><div style="font-size:15px;font-weight:600;color:var(--ink)">Priority schools</div><div class="mla"><button class="btn btn-s" onclick="gp('schools',document.querySelectorAll('.nl')[1])">All schools &#8594;</button></div></div>
+  <div class="sgrid" id="dgrid"></div>
+</div>
+
+<!-- SCHOOLS -->
+<div id="pg-schools" class="pg">
+  <div class="tb">
+    <div class="pg-title">All Schools</div>
+    <select class="fsel" id="fzone" onchange="rSch()"><option value="">All Zones</option></select>
+    <select class="fsel" id="fstatus" onchange="rSch()"><option value="">All Status</option><option value="ac">Has AC</option><option value="dm">DM Only</option><option value="vacant">AC Vacant</option></select>
+    <div class="mla"><span style="font-size:12px;color:var(--ink4)" id="scnt"></span></div>
+  </div>
+  <div class="sgrid" id="sgrid"></div>
+</div>
+
+<!-- TRAINING -->
+<div id="pg-training" class="pg">
+  <div class="tb">
+    <div class="pg-title">Training Tracker</div>
+    <select class="fsel" id="ftr" onchange="rTrain()"><option value="">All Training</option><option value="lsq1">LSQ Part 1</option><option value="lsq2">LSQ Part 2</option><option value="c">Counselling</option><option value="dm">DM Training</option></select>
+    <select class="fsel" id="ftrs" onchange="rTrain()"><option value="">All Status</option><option value="pend">Pending</option><option value="done">Completed</option></select>
+    <div class="mla" id="train-export" style="display:none">
+      <button class="btn btn-s" onclick="exportTrainingExcel()">&#11015; Export Excel</button>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--ink3);margin-bottom:14px">
+    LSQ Part 1 + Part 2 + Counselling: AC and FDE &nbsp;|&nbsp; DM Training: AC and DM
+  </div>
+  <div style="background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)">
+    <table class="tbl"><thead><tr><th>School</th><th>Name</th><th>Role</th><th>LSQ Part 1</th><th>LSQ Part 2</th><th>Counselling</th><th>DM Training</th><th>Date</th></tr></thead>
+    <tbody id="ttbody"></tbody></table>
+  </div>
+</div>
+
+<!-- ALLOWANCE -->
+<div id="pg-allowance" class="pg">
+  <div class="tb"><div class="pg-title">DM Allowance Tracker</div>
+    <select class="fsel" id="fa" onchange="rAllow()"><option value="">All Schools</option><option value="active">Allowance Active</option><option value="warn">Warning — Stop Needed</option></select>
+  </div>
+  <div class="fnote fn-a" style="margin-bottom:16px"><strong>Rule:</strong> School has active AC &#8594; DM allowance must be stopped. No AC &#8594; DM gets allowance.</div>
+  <div style="background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)">
+    <table class="tbl"><thead><tr><th>School</th><th>Zone</th><th>Team Leader</th><th>AC</th><th>DM</th><th>Allowance</th><th id="allow-action-th"></th></tr></thead>
+    <tbody id="atbody"></tbody></table>
+  </div>
+</div>
+
+<!-- FACEBOOK -->
+<div id="pg-facebook" class="pg">
+  <div class="tb"><div class="pg-title">Facebook Access Tracker</div>
+    <select class="fsel" id="ffb" onchange="rFB()"><option value="">All Schools</option><option value="given">Access Given</option><option value="pend">Access Pending</option></select>
+    <div class="mla" id="fb-export" style="display:none">
+      <button class="btn btn-s" onclick="exportFBExcel()">&#11015; Export Excel</button>
+    </div>
+  </div>
+  <div class="fnote fn-b" style="margin-bottom:16px">Share Facebook page access after DM Training is completed. Record the Page ID and mark access given with the date.</div>
+  <div style="background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)">
+    <table class="tbl"><thead><tr><th>School</th><th>Zone</th><th>DM Staff</th><th>DM Training</th><th>Facebook Page ID</th><th>Access Given</th><th>Date</th><th id="fb-action-th"></th></tr></thead>
+    <tbody id="fbtbody"></tbody></table>
+  </div>
+</div>
+
+<!-- REQUESTS -->
+<div id="pg-requests" class="pg">
+  <div class="tb"><div class="pg-title">Staff Change Requests</div><div style="font-size:12px;color:var(--ink3)">School emails HO &#8594; HO enters here &#8594; Approved by TL or DM Admin</div></div>
+  <div id="rlist"></div>
+</div>
+
+<!-- AUDIT LOG -->
+<div id="pg-audit" class="pg">
+  <div class="tb">
+    <div class="pg-title">Audit Log</div>
+    <select class="fsel" id="faudit" onchange="rAudit()"><option value="">All Changes</option><option value="tl">By Team Leader</option><option value="dm">By DM Admin</option></select>
+    <div class="mla"><button class="btn btn-s" onclick="exportAuditExcel()">&#11015; Export Excel</button></div>
+  </div>
+  <div style="background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)">
+    <table class="tbl"><thead><tr><th>Date &amp; Time</th><th>Changed By</th><th>School</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody id="auditbody"></tbody></table>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="ov" id="ov-det">
+  <div class="modal wide">
+    <div class="mh">
+      <div><div class="mt" id="det-n"></div><div class="ms" id="det-s"></div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-o btn-s" id="det-add-btn" onclick="openAS(curSid,null)" style="display:none">+ Add Staff</button>
+        <button class="mc" onclick="cm('ov-det')">&#10005;</button>
+      </div>
+    </div>
+    <div class="mb">
+      <div class="dtabs">
+        <button class="dtab on" onclick="showDT('staff',this)">Staff</button>
+        <button class="dtab" onclick="showDT('history',this)">History</button>
+        <button class="dtab" onclick="showDT('training',this)">Training</button>
+        <button class="dtab" onclick="showDT('fb',this)">Facebook</button>
+        <button class="dtab" onclick="showDT('allow',this)">Allowance</button>
+      </div>
+      <div id="dt-staff"></div>
+      <div id="dt-history" style="display:none"></div>
+      <div id="dt-training" style="display:none"></div>
+      <div id="dt-fb" style="display:none"></div>
+      <div id="dt-allow" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SCHOOL (TL only) -->
+<div class="ov" id="ov-sch">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Add School</div></div><button class="mc" onclick="cm('ov-sch')">&#10005;</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">School Name *</label><input class="fi" id="sc-n" placeholder="Podar International School (CBSE) ..."/></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Zone</label><input class="fi" id="sc-z" placeholder="e.g. Maharashtra"/></div>
+        <div class="fg"><label class="fl">City</label><input class="fi" id="sc-c" placeholder="e.g. Nagpur"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Team Leader Name</label><input class="fi" id="sc-tl" placeholder="Full name"/></div>
+        <div class="fg"><label class="fl">TL Email</label><input class="fi" id="sc-tle" placeholder="tl@podar.org"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Facebook Page ID</label><input class="fi" id="sc-fbid" placeholder="e.g. pis.cbse.sawangi"/></div>
+        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="sc-fburl" placeholder="https://facebook.com/..."/></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-sch')">Cancel</button><button class="btn btn-o" onclick="saveSch()">Save School</button></div>
+  </div>
+</div>
+
+<!-- ADD STAFF -->
+<div class="ov" id="ov-stf">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Add Staff Member</div><div class="ms">Contact details help teams coordinate directly</div></div><button class="mc" onclick="cm('ov-stf')">&#10005;</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">School *</label><select class="fs" id="st-sid"></select></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Full Name *</label><input class="fi" id="st-n" placeholder="Full name"/></div>
+        <div class="fg"><label class="fl">Role *</label>
+          <select class="fs" id="st-r" onchange="rChg()">
+            <option value="AC">AC — Admission Counsellor</option>
+            <option value="DM">DM — Digital Marketing</option>
+            <option value="FDE">FDE — Front Desk Executive</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl" id="dlbl">Joining Date *</label><input class="fi" type="date" id="st-j"/></div>
+        <div class="fg"><label class="fl">Email *</label><input class="fi" id="st-e" placeholder="staff@podar.org"/></div>
+      </div>
+      <div class="fg"><label class="fl">Phone</label><input class="fi" id="st-p" placeholder="Mobile number"/></div>
+      <div id="note-dm" style="display:none" class="fnote fn-b">Adding DM: Allowance will be Active. Stop it if school has an AC.</div>
+      <div id="note-ac" style="display:none" class="fnote fn-a">Adding AC: Active DM allowance will be flagged for review.</div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-stf')">Cancel</button><button class="btn btn-o" onclick="saveStf()">Add Staff Member</button></div>
+  </div>
+</div>
+
+<!-- MARK LEFT -->
+<div class="ov" id="ov-lft">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Mark Staff as Left</div><div class="ms" id="lft-ms">Recording departure</div></div><button class="mc" onclick="cm('ov-lft')">&#10005;</button></div>
+    <div class="mb">
+      <div class="frow">
+        <div class="fg"><label class="fl">Last Working Date *</label><input class="fi" type="date" id="lv-d"/></div>
+        <div class="fg"><label class="fl">Reason</label><select class="fs" id="lv-r"><option>Resigned</option><option>Terminated</option><option>Transferred</option><option>Contract ended</option><option>Other</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><input class="fi" id="lv-nt" placeholder="Any notes..."/></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-lft')">Cancel</button><button class="btn btn-d" onclick="confLeft()">Confirm — Mark as Left</button></div>
+  </div>
+</div>
+
+<!-- TRAINING DONE -->
+<div class="ov" id="ov-trn">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Mark Training Complete</div><div class="ms" id="trn-ms">Recording completion</div></div><button class="mc" onclick="cm('ov-trn')">&#10005;</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Completion Date *</label><input class="fi" type="date" id="trn-d"/></div>
+      <div class="fnote fn-g">This date is stored and visible in the training tracker and staff profile.</div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-trn')">Cancel</button><button class="btn btn-o" onclick="confTrn()">Save Completion Date</button></div>
+  </div>
+</div>
+
+<!-- FACEBOOK EDIT -->
+<div class="ov" id="ov-fb">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Facebook Page Details</div><div class="ms" id="fb-ms">Edit Facebook info</div></div><button class="mc" onclick="cm('ov-fb')">&#10005;</button></div>
+    <div class="mb">
+      <div class="fnote fn-b" style="margin-bottom:14px">Share Facebook access only after DM Training is completed. Record Page ID and tick once access is given.</div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Facebook Page ID</label><input class="fi" id="fb-id" placeholder="e.g. pis.cbse.sawangi"/></div>
+        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="fb-url" placeholder="https://facebook.com/..."/></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Page Access Given?</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sur2);border:1.5px solid var(--c3);border-radius:var(--r);cursor:pointer">
+          <input type="checkbox" id="fb-acc" style="width:16px;height:16px;accent-color:var(--grn)"/>
+          <span style="font-size:13px;color:var(--ink)">Yes — Facebook page access has been shared with school's DM</span>
+        </label>
+      </div>
+      <div class="fg"><label class="fl">Access Given Date</label><input class="fi" type="date" id="fb-date"/></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-fb')">Cancel</button><button class="btn btn-o" onclick="saveFB()">Save</button></div>
+  </div>
+</div>
+
+<!-- EDIT TL -->
+<div class="ov" id="ov-tl">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Edit Team Leader</div><div class="ms" id="tl-ms">Assign TL for this school</div></div><button class="mc" onclick="cm('ov-tl')">&#10005;</button></div>
+    <div class="mb">
+      <div class="frow">
+        <div class="fg"><label class="fl">Team Leader Name *</label><input class="fi" id="tl-n" placeholder="Full name"/></div>
+        <div class="fg"><label class="fl">TL Email</label><input class="fi" id="tl-e" placeholder="tl@podar.org"/></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-tl')">Cancel</button><button class="btn btn-o" onclick="saveTL()">Save TL</button></div>
+  </div>
+</div>
+
+<!-- ADD REQUEST -->
+<div class="ov" id="ov-req">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Log Staff Change</div><div class="ms">School emails HO — log it here for approval</div></div><button class="mc" onclick="cm('ov-req')">&#10005;</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">School *</label><select class="fs" id="rq-s"></select></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Change Type *</label><select class="fs" id="rq-t"><option value="new_join">New Staff Joining</option><option value="left">Staff Left</option><option value="update">Update Info</option></select></div>
+        <div class="fg"><label class="fl">Role *</label><select class="fs" id="rq-r"><option value="AC">AC</option><option value="DM">DM</option><option value="FDE">FDE</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Staff Name *</label><input class="fi" id="rq-n" placeholder="Full name"/></div>
+        <div class="fg"><label class="fl">Effective Date *</label><input class="fi" type="date" id="rq-d"/></div>
+      </div>
+      <div class="fg"><label class="fl">Contact</label><input class="fi" id="rq-c" placeholder="Email or phone"/></div>
+      <div class="fg"><label class="fl">Notes</label><input class="fi" id="rq-nt" placeholder="Additional context..."/></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="cm('ov-req')">Cancel</button><button class="btn btn-o" onclick="subReq()">Log Request</button></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIG
+//  Step 1: App works in LOCAL MODE right now (localStorage)
+//  Step 2: After deploying Apps Script, paste URL below
+//          to switch to Google Sheets mode
+// ══════════════════════════════════════════════════════
+const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+const IS_LOCAL   = !SCRIPT_URL || SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE';
+
+// ── PASSWORDS (TL and DM only — view needs no password) ──
+// Change these before sharing with your team
+const LOCAL_PASSWORDS = {
+  tl: 'TL2026secure',
+  dm: 'DM2026harshal'
+};
+
+// ── STATE ──
+let db = {schools:[], staff:[], history:[], requests:[]};
+let currentRole = null;
+let curSid = null;
+let trnStaffId = null, trnKey = null;
+let lvid = null, fbSid = null, tlSid = null;
+
+// ── ROLE PERMISSIONS ──
+const CAN = {
+  view: {addSchool:false,editAC:false,editDM:false,editFDE:false,approve:false,exportTL:false,exportDM:false},
+  tl:   {addSchool:true, editAC:true, editDM:false,editFDE:true, approve:true, exportTL:true, exportDM:false},
+  dm:   {addSchool:false,editAC:false,editDM:true, editFDE:false,approve:true, exportTL:false,exportDM:true}
+};
+const can = (perm) => currentRole && CAN[currentRole]?.[perm];
+
+// ── LOCAL STORAGE SAVE ──
+function saveLocal() {
+  localStorage.setItem('psm_db', JSON.stringify(db));
+}
+
+// ── API — uses Google Sheets if URL set, localStorage if not ──
+async function api(action, data = {}) {
+  // LOCAL MODE — no Google Sheets connected yet
+  if(IS_LOCAL) {
+    return handleLocal(action, data);
+  }
+  // SHEETS MODE
+  const saving = document.getElementById('saving-ind');
+  saving.classList.add('show');
+  try {
+    const payload = {action, role: currentRole, ...data};
+    const url = SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(payload));
+    const res = await fetch(url);
+    const json = await res.json();
+    saving.classList.remove('show');
+    if(json.error) throw new Error(json.error);
+    return json;
+  } catch(e) {
+    saving.classList.remove('show');
+    toast('Connection error — check your Apps Script URL');
+    throw e;
+  }
+}
+
+// ── LOCAL MODE HANDLER ──
+function handleLocal(action, p) {
+  switch(action) {
+    case 'login':
+      if(p.role === 'view') return {ok: true};
+      return {ok: p.password === LOCAL_PASSWORDS[p.role]};
+    case 'getData':
+      const saved = localStorage.getItem('psm_db');
+      return saved ? JSON.parse(saved) : {schools:[],staff:[],history:[],requests:[]};
+    case 'addSchool':
+      db.schools.push(p.data); saveLocal(); return {ok:true};
+    case 'addStaff':
+      db.staff.push(p.data); saveLocal(); return {ok:true};
+    case 'markLeft':
+      const ls = db.staff.find(x=>x.id===p.id);
+      if(ls){ls.active=false; ls.leftDate=p.date;} saveLocal(); return {ok:true};
+    case 'updateTraining':
+      const ts = db.staff.find(x=>x.id===p.id);
+      if(ts){if(!ts.tr)ts.tr={};ts.tr[p.key]={s:'done',d:p.date};} saveLocal(); return {ok:true};
+    case 'updateFacebook':
+      const fsch = db.schools.find(x=>x.id===p.data.id);
+      if(fsch){Object.assign(fsch,{fbId:p.data.fbId,fbUrl:p.data.fbUrl,fbAccess:p.data.fbAccess,fbDate:p.data.fbDate});} saveLocal(); return {ok:true};
+    case 'updateAllowance':
+      const as = db.staff.find(x=>x.id===p.id);
+      if(as){as.allow=p.allow;} saveLocal(); return {ok:true};
+    case 'updateTL':
+      const tsch = db.schools.find(x=>x.id===p.id);
+      if(tsch){tsch.tl=p.tl;tsch.tlEmail=p.tlEmail;} saveLocal(); return {ok:true};
+    case 'addRequest':
+      db.requests.push(p.data); saveLocal(); return {ok:true};
+    case 'updateRequest':
+      const rq = db.requests.find(x=>x.id===p.id);
+      if(rq){rq.status=p.status;} saveLocal(); return {ok:true};
+    default:
+      return {ok:true};
+  }
+}
+
+// ── LOGIN ──
+let selectedRole = null;
+function selectRole(role, btn) {
+  selectedRole = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const pwWrap  = document.getElementById('pw-wrap');
+  const loginBtn = document.getElementById('login-btn');
+  document.getElementById('login-err').style.display = 'none';
+
+  if(role === 'view') {
+    // View — no password, enter directly
+    pwWrap.style.display = 'none';
+    loginBtn.style.display = 'block';
+    loginBtn.innerHTML = 'Enter as Viewer &rarr;';
+  } else {
+    pwWrap.style.display = 'flex';
+    loginBtn.style.display = 'block';
+    loginBtn.innerHTML = 'Login &rarr;';
+    setTimeout(() => document.getElementById('pw-input').focus(), 50);
+  }
+}
+
+async function doLogin() {
+  if(!selectedRole) { toast('Please select your role first'); return; }
+  document.getElementById('login-err').style.display = 'none';
+
+  const loginBtn = document.getElementById('login-btn');
+  loginBtn.innerHTML = 'Checking...';
+  loginBtn.disabled = true;
+
+  try {
+    const pw  = document.getElementById('pw-input').value;
+    const res = await api('login', {role: selectedRole, password: pw});
+
+    if(res.ok) {
+      currentRole = selectedRole;
+      document.getElementById('login-wrap').classList.add('hidden');
+      document.getElementById('loading-screen').classList.remove('hidden');
+      document.getElementById('load-text').textContent = IS_LOCAL ? 'Loading local data...' : 'Loading from Google Sheets...';
+      await loadData();
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('main-nav').style.display = 'flex';
+      setupRoleUI();
+      rDash();
+    } else {
+      document.getElementById('login-err').style.display = 'block';
+      loginBtn.innerHTML = selectedRole === 'view' ? 'Enter as Viewer &rarr;' : 'Login &rarr;';
+      loginBtn.disabled = false;
+    }
+  } catch(e) {
+    document.getElementById('login-err').style.display = 'block';
+    loginBtn.innerHTML = selectedRole === 'view' ? 'Enter as Viewer &rarr;' : 'Login &rarr;';
+    loginBtn.disabled = false;
+  }
+}
+
+function doLogout() {
+  currentRole = null;
+  db = {schools:[],staff:[],history:[],requests:[]};
+  document.getElementById('main-nav').style.display = 'none';
+  document.querySelector('.login-wrap').classList.remove('hidden');
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-wrap').style.display = 'none';
+  document.getElementById('login-btn').style.display = 'none';
+  document.getElementById('login-btn').disabled = false;
+  selectedRole = null;
+}
+
+async function loadData() {
+  const res = await api('getData');
+  db.schools  = res.schools  || [];
+  db.staff    = res.staff    || [];
+  db.history  = res.history  || [];
+  db.requests = res.requests || [];
+  pSel();
+}
+
+function setupRoleUI() {
+  const rb = document.getElementById('role-badge');
+  if(currentRole === 'tl')       { rb.innerHTML = '&#128100; Team Leader'; rb.className = 'role-badge rb-tl'; }
+  else if(currentRole === 'dm')  { rb.innerHTML = '&#128225; DM Admin'; rb.className = 'role-badge rb-dm'; }
+  else                           { rb.innerHTML = '&#128065; HO View'; rb.className = 'role-badge rb-view'; }
+
+  // Show mode indicator if local
+  if(IS_LOCAL) {
+    const ind = document.createElement('span');
+    ind.innerHTML = ' &bull; Local Mode';
+    ind.style.cssText = 'font-size:10px;color:rgba(255,255,255,.45);margin-left:6px';
+    rb.parentNode.insertBefore(ind, rb.nextSibling);
+  }
+
+  if(can('addSchool')) document.getElementById('dash-actions').style.display = 'flex';
+  if(can('exportTL') || can('exportDM')) document.getElementById('train-export').style.display = 'flex';
+  if(can('exportDM')) document.getElementById('fb-export').style.display = 'flex';
+  if(can('editDM'))   document.getElementById('nl-fb').classList.remove('hidden');
+  if(can('approve'))  document.getElementById('allow-action-th').textContent = 'Action';
+  if(can('exportDM')) document.getElementById('fb-action-th').textContent = 'Action';
+}
+
+// ── HELPERS ──
+const sv = () => {};
+const fd = d => d ? new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fdt = ts => ts ? new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+const td = () => new Date().toISOString().slice(0,10);
+const zones = () => [...new Set(db.schools.map(s=>s.zone).filter(Boolean))].sort();
+const gR = (sid,role) => db.staff.find(s=>s.sid===sid&&s.role===role&&s.active);
+const gAll = (sid,a=true) => db.staff.filter(s=>s.sid===sid&&(!a||s.active));
+const gSt = sid => gR(sid,'AC')?'ac':gR(sid,'DM')?'dm':'vacant';
+const ini = n => (n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const aList = () => db.schools.filter(s=>{ const ac=gR(s.id,'AC'),dm=gR(s.id,'DM'); return ac&&dm&&dm.allow; });
+const tPend = () => db.staff.filter(s=>s.active&&(s.tr?.lsq1?.s==='pending'||s.tr?.lsq2?.s==='pending'||s.tr?.c?.s==='pending'||s.tr?.dm?.s==='pending')).length;
+const rtc = r => r==='AC'?'r-ac':r==='DM'?'r-dm':r==='FDE'?'r-fd':'r-v';
+const avc = r => r==='AC'?'av-ac':r==='DM'?'av-dm':r==='FDE'?'av-fd':'av-v';
+const dlbl = role => role==='DM'?'Responsibility Date':'Joining Date';
+const whoLabel = () => currentRole==='tl'?'Team Leader':currentRole==='dm'?'DM Admin (Harshal)':'Viewer';
+const tB = t => {
+  if(!t||t.s==='na') return '<span class="tst tst-n">N/A</span>';
+  if(t.s==='done') return `<span class="tst tst-d">&#10003; Done${t.d?`<span style="font-weight:400;opacity:.75;font-size:10px"> ${fd(t.d)}</span>`:''}` + '</span>';
+  return '<span class="tst tst-p">Pending</span>';
+};
+
+function pSel() {
+  ['st-sid','rq-s'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=db.schools.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');});
+  const zf=document.getElementById('fzone');if(zf){const c=zf.value;zf.innerHTML='<option value="">All Zones</option>'+zones().map(z=>`<option value="${z}">${z}</option>`).join('');zf.value=c;}
+}
+
+// ── NAV ──
+function gp(id,btn) {
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nl').forEach(t=>t.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  btn?.classList.add('on');
+  if(id==='dashboard')rDash();if(id==='schools')rSch();if(id==='training')rTrain();
+  if(id==='allowance')rAllow();if(id==='facebook')rFB();if(id==='requests')rReqs();if(id==='audit')rAudit();
+}
+
+// ── SCHOOL CARD ──
+function sCard(sch) {
+  const ac=gR(sch.id,'AC'),dm=gR(sch.id,'DM'),fde=gR(sch.id,'FDE');
+  const st=gSt(sch.id),alert=ac&&dm&&dm.allow;
+  const sr = (s, role) => {
+    if(s) return `<div class="srow">
+      <div class="sav ${avc(s.role)}">${ini(s.name)}</div>
+      <div class="srow-info">
+        <div class="srow-name">${s.name}</div>
+        <div class="srow-meta">${s.email}${s.phone?' · '+s.phone:''}</div>
+        <div class="srow-meta">${dlbl(s.role)}: ${fd(s.join)}</div>
+      </div>
+      <span class="rtag ${rtc(s.role)}">${s.role}</span>
+      ${s.role==='DM'?`<div class="allow-dot ${s.allow?'allow-on':'allow-off'}" title="${s.allow?'Allowance ON':'Allowance OFF'}"></div>`:''}
+    </div>`;
+    return `<div class="srow"><div class="sav av-v">—</div><div class="srow-info"><div class="srow-name" style="color:var(--ink4);font-style:italic">${role} Vacant</div></div><span class="rtag r-v">${role}</span></div>`;
+  };
+  return `<div class="scard ${alert?'flag':''}" onclick="openDet('${sch.id}')">
+    <div class="sc-head">
+      <div class="sc-top">
+        <div><div class="sc-name">${sch.name}</div><div class="sc-loc">${sch.zone||''}${sch.city?' · '+sch.city:''}</div></div>
+        <span class="stag ${st==='ac'?'st-ac':st==='dm'?'st-dm':'st-v'}">${st==='ac'?'AC Active':st==='dm'?'DM Only':'Vacant'}</span>
+      </div>
+      <div class="sc-meta">
+        ${sch.fbAccess?`<span class="fb-chip fb-on">&#10003; FB Access</span>`:`<span class="fb-chip fb-off">FB Pending</span>`}
+      </div>
+    </div>
+    <div class="sc-body">${sr(ac,'AC')}${sr(dm,'DM')}${sr(fde,'FDE')}</div>
+    ${sch.tl?`<div class="sc-tl-bar"><span class="rtag r-tl">TL</span><strong>${sch.tl}</strong>${sch.tlEmail?` <a href="mailto:${sch.tlEmail}" style="font-size:10px;color:var(--blu)">${sch.tlEmail}</a>`:''}</div>`:''}
+    ${alert?`<div class="sc-flag amb">&#9888; AC active — DM allowance should be stopped</div>`:''}
+  </div>`;
+}
+
+// ── DASHBOARD ──
+function rDash() {
+  document.getElementById('dddate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const als = aList();
+  document.getElementById('s1').textContent = db.schools.length;
+  document.getElementById('s2').textContent = db.schools.filter(s=>gR(s.id,'AC')).length;
+  document.getElementById('s3').textContent = db.staff.filter(s=>s.active&&s.role==='DM'&&s.allow).length;
+  document.getElementById('s4').textContent = als.length;
+  document.getElementById('s5').textContent = tPend();
+  document.getElementById('trb').textContent = tPend();
+  document.getElementById('rqb').textContent = db.requests.filter(r=>r.status==='pending').length;
+  document.getElementById('dalert').innerHTML = als.length
+    ? `<div class="alert-box"><div class="alert-n">${als.length}</div><div><div style="font-size:14px;font-weight:600;color:var(--amb)">${als.length} school${als.length>1?'s':''} — AC active but DM allowance still ON</div><div style="font-size:12px;color:var(--amb);margin-top:2px">Stop DM allowance to avoid unnecessary payments</div></div><div class="mla"><button class="btn btn-s" onclick="gp('allowance',document.querySelectorAll('.nl')[3])">Review &#8594;</button></div></div>` : '';
+  document.getElementById('dgrid').innerHTML = [...als,...db.schools.filter(s=>!als.find(a=>a.id===s.id))].slice(0,6).map(sCard).join('');
+}
+
+function rSch() {
+  const zf=document.getElementById('fzone')?.value||'',sf=document.getElementById('fstatus')?.value||'';
+  const list=db.schools.filter(s=>(!zf||s.zone===zf)&&(!sf||gSt(s.id)===sf));
+  document.getElementById('scnt').textContent=list.length+' schools';
+  document.getElementById('sgrid').innerHTML=list.map(sCard).join('')||'<div class="empty"><div class="empty-icon">&#127979;</div><p>No schools match</p></div>';
+}
+
+function rTrain() {
+  const tf=document.getElementById('ftr')?.value||'',sf=document.getElementById('ftrs')?.value||'';
+  // LSQ1 + LSQ2 + Counselling: AC and FDE | DM Training: AC and DM
+  const staff = db.staff.filter(s => {
+    if(!s.active) return false;
+    if(tf==='lsq1'||tf==='lsq2'||tf==='c') return s.role==='AC'||s.role==='FDE';
+    if(tf==='dm') return s.role==='AC'||s.role==='DM';
+    return s.role==='AC'||s.role==='DM'||s.role==='FDE';
+  });
+  document.getElementById('ttbody').innerHTML = staff.map((s) => {
+    const sch=db.schools.find(sc=>sc.id===s.sid),t=s.tr||{};
+    const hasPending = t.lsq1?.s==='pending'||t.lsq2?.s==='pending'||t.c?.s==='pending'||t.dm?.s==='pending';
+    const allDone    = t.lsq1?.s==='done'&&t.lsq2?.s==='done'&&t.c?.s==='done'&&t.dm?.s==='done';
+    if(sf==='pend'&&!hasPending) return '';
+    if(sf==='done'&&!allDone) return '';
+    const lsqRel = s.role==='AC'||s.role==='FDE';
+    const dmRel  = s.role==='AC'||s.role==='DM';
+    return `<tr>
+      <td><div style="font-weight:500">${sch?.name||'—'}</div></td>
+      <td><div style="font-weight:500">${s.name}</div><div style="font-size:11px;color:var(--ink4)">${s.email}</div></td>
+      <td><span class="rtag ${rtc(s.role)}">${s.role}</span></td>
+      <td>${lsqRel?tB(t.lsq1):'<span class="tst tst-n">N/A</span>'}</td>
+      <td>${lsqRel?tB(t.lsq2):'<span class="tst tst-n">N/A</span>'}</td>
+      <td>${lsqRel?tB(t.c):'<span class="tst tst-n">N/A</span>'}</td>
+      <td>${dmRel?tB(t.dm):'<span class="tst tst-n">N/A</span>'}</td>
+      <td style="font-size:12px;color:var(--ink3)">${fd(s.join)}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:32px">No records match</td></tr>';
+}
+
+function rAllow() {
+  const af=document.getElementById('fa')?.value||'';
+  document.getElementById('atbody').innerHTML = db.schools.map(sch => {
+    const ac=gR(sch.id,'AC'),dm=gR(sch.id,'DM'),al=dm?.allow===true,warn=ac&&dm&&dm.allow;
+    if(af==='active'&&!al)return '';if(af==='warn'&&!warn)return '';
+    return `<tr${warn?' style="background:var(--amb2)"':''}>
+      <td><div style="font-weight:500">${sch.name}</div></td>
+      <td style="font-size:12px;color:var(--ink4)">${sch.zone||'—'}</td>
+      <td><div style="font-size:12px">${sch.tl||'—'}</div></td>
+      <td>${ac?`<div style="font-weight:500">${ac.name}</div><div style="font-size:11px;color:var(--ink4)">${ac.email}</div>`:'<span class="tst tst-p">Vacant</span>'}</td>
+      <td>${dm?`<div style="font-weight:500">${dm.name}</div><div style="font-size:11px;color:var(--ink4)">${dm.email}</div>`:'<span class="tst tst-n">No DM</span>'}</td>
+      <td>${warn?'<span class="tst tst-p">&#9888; Should Stop</span>':al?'<span class="tst tst-d">Active</span>':dm?'<span class="tst tst-n">Stopped</span>':'<span class="tst tst-n">No DM</span>'}</td>
+      <td style="padding:11px 14px">
+        ${can('editDM')&&warn?`<button class="btn btn-s btn-d" onclick="stopAlw('${dm.id}')">Stop</button>`:''}
+        ${can('editDM')&&dm&&!al?`<button class="btn btn-s btn-g" onclick="startAlw('${dm.id}')">Activate</button>`:''}
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--ink4);padding:32px">No records</td></tr>';
+}
+
+async function stopAlw(id) {
+  await api('updateAllowance', {id, allow: false, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  const s=db.staff.find(x=>x.id===id);s.allow=false;
+  logLocal(s.sid,'Stopped DM allowance','DM: '+s.name,'allowance');
+  rAllow();rDash();toast('DM allowance stopped for '+s.name);
+}
+async function startAlw(id) {
+  await api('updateAllowance', {id, allow: true, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  const s=db.staff.find(x=>x.id===id);s.allow=true;
+  logLocal(s.sid,'Activated DM allowance','DM: '+s.name,'allowance');
+  rAllow();toast('Allowance activated for '+s.name);
+}
+
+function rFB() {
+  const ff=document.getElementById('ffb')?.value||'';
+  document.getElementById('fbtbody').innerHTML = db.schools.map(sch => {
+    const dm=gR(sch.id,'DM'),dmDone=dm?.tr?.dm?.s==='done';
+    if(ff==='given'&&!sch.fbAccess)return '';if(ff==='pend'&&sch.fbAccess)return '';
+    return `<tr>
+      <td><div style="font-weight:500">${sch.name}</div></td>
+      <td style="font-size:12px;color:var(--ink4)">${sch.zone||'—'}</td>
+      <td>${dm?`<div style="font-weight:500">${dm.name}</div><div style="font-size:11px;color:var(--ink4)">${dm.email}</div>`:'<span style="color:var(--ink4);font-style:italic">No DM</span>'}</td>
+      <td>${dm?tB(dm.tr?.dm):'<span class="tst tst-n">N/A</span>'}</td>
+      <td style="font-family:monospace;font-size:12px">${sch.fbId||`<span style="color:var(--ink4);font-style:italic;font-family:var(--fn)">Not set</span>`}</td>
+      <td><div style="display:inline-flex;align-items:center;gap:6px"><div class="fb-tick ${sch.fbAccess?'fb-tick-y':'fb-tick-n'}">${sch.fbAccess?'&#10003;':'&#10005;'}</div><span style="font-size:12px">${sch.fbAccess?'Given':'Not yet'}</span></div></td>
+      <td style="font-size:12px;color:var(--ink3)">${sch.fbAccess&&sch.fbDate?fd(sch.fbDate):'—'}</td>
+      <td>${can('editDM')?`<button class="btn btn-s" onclick="openFB('${sch.id}')">Edit &#9998;</button>`:''}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:32px">No records</td></tr>';
+}
+
+function rReqs() {
+  document.getElementById('rqb').textContent = db.requests.filter(r=>r.status==='pending').length;
+  const p = db.requests.filter(r=>r.status==='pending');
+  document.getElementById('rlist').innerHTML = p.length ? p.map(r => {
+    const sch=db.schools.find(s=>s.id===r.sid);
+    return `<div class="rcard">
+      <div class="ricon">${r.type==='new_join'?'&#128100;':r.type==='left'?'&#128075;':'&#9999;'}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;margin-bottom:3px">${{new_join:'New Staff Joining',left:'Staff Left',update:'Update Info'}[r.type]} — ${r.name} <span class="rtag ${rtc(r.role)}">${r.role}</span></div>
+        <div style="font-size:12px;color:var(--ink2)">${sch?.name||'?'} · Effective: ${fd(r.date)} · TL: ${sch?.tl||'—'}</div>
+        ${r.contact?`<div style="font-size:12px;color:var(--blu);margin-top:3px">${r.contact}</div>`:''}
+        ${r.notes?`<div style="font-size:11px;color:var(--ink4);margin-top:2px">${r.notes}</div>`:''}
+        <div style="font-size:10px;color:var(--ink4);margin-top:4px">Logged: ${fd(r.sub)}</div>
+      </div>
+      ${can('approve')?`<div style="display:flex;gap:7px;flex-shrink:0">
+        <button class="btn btn-s btn-g" onclick="appR('${r.id}')">&#10003; Approve</button>
+        <button class="btn btn-s btn-d" onclick="rejR('${r.id}')">&#10005; Reject</button>
+      </div>`:''}
+    </div>`;
+  }).join('') : '<div class="empty"><div class="empty-icon">&#10003;</div><p>No pending requests</p></div>';
+}
+
+async function appR(id) {
+  const r=db.requests.find(x=>x.id===id);if(!r)return;
+  if(r.type==='new_join') {
+    const ns={id:'p'+Date.now(),sid:r.sid,name:r.name,role:r.role,email:r.contact||'',phone:'',join:r.date,active:true,allow:r.role==='DM',
+      tr:{lsq1:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},lsq2:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},c:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},dm:{s:(r.role==='AC'||r.role==='DM')?'pending':'na',d:''}}};
+    await api('addStaff', {data: ns, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+    db.staff.push(ns);
+    logLocal(r.sid,'Approved joining request',r.role+': '+r.name,'request');
+    if(r.role==='AC'){const dm=gR(r.sid,'DM');if(dm?.allow)toast('AC added — check DM allowance!');}
+  } else if(r.type==='left') {
+    const s=db.staff.find(x=>x.sid===r.sid&&x.name===r.name&&x.active);
+    if(s){
+      await api('markLeft', {id:s.id, date:r.date, reason:'Request approved', changedBy:whoLabel(), changedAt:new Date().toISOString()});
+      s.active=false;
+      logLocal(r.sid,'Approved exit request',r.role+': '+r.name,'request');
+    }
+  }
+  r.status='approved';
+  await api('updateRequest', {id, status:'approved', changedBy: whoLabel()});
+  rReqs();rDash();toast('Request approved');
+}
+async function rejR(id) {
+  await api('updateRequest', {id, status:'rejected', changedBy: whoLabel()});
+  db.requests.find(x=>x.id===id).status='rejected';
+  rReqs();toast('Request rejected');
+}
+
+function rAudit() {
+  const af = document.getElementById('faudit')?.value||'';
+  const entries = db.history.filter(h=>(!af||h.changedBy?.toLowerCase().includes(af==='tl'?'team leader':'dm admin'))).sort((a,b)=>(b.changedAt||'').localeCompare(a.changedAt||''));
+  document.getElementById('auditbody').innerHTML = entries.map((h,i) => {
+    const sch=db.schools.find(s=>s.id===h.sid);
+    return `<tr>
+      <td style="font-size:12px;color:var(--ink3);white-space:nowrap">${fdt(h.changedAt)}</td>
+      <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${h.changedBy?.includes('DM')?'var(--blu2)':h.changedBy?.includes('Team')?'var(--ora3)':'var(--c2)'};color:${h.changedBy?.includes('DM')?'var(--blu)':h.changedBy?.includes('Team')?'var(--ora2)':'var(--ink3)'}">${h.changedBy||'—'}</span></td>
+      <td style="font-size:12px;font-weight:500">${sch?.name||'—'}</td>
+      <td><span class="rtag ${rtc(h.role)}">${h.role}</span> <span style="font-size:12px">${h.type==='joined'?'Joined':'Left'}</span></td>
+      <td style="font-size:12px;color:var(--ink2)">${h.name}${h.note?' — '+h.note:''}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--ink4);padding:32px">No audit entries yet</td></tr>';
+}
+
+// ── LOCAL AUDIT LOG ──
+function logLocal(sid, action, detail, type='system') {
+  db.history.push({
+    id: 'h'+Date.now(), sid, type: 'system', role: type,
+    name: detail, email:'', phone:'', date: td(),
+    note: action, changedBy: whoLabel(), changedAt: new Date().toISOString()
+  });
+}
+
+// ── DETAIL MODAL ──
+function openDet(sid) {
+  curSid=sid;const sch=db.schools.find(s=>s.id===sid);
+  document.getElementById('det-n').textContent=sch.name;
+  document.getElementById('det-s').textContent=(sch.zone||'')+(sch.city?' · '+sch.city:'')+(sch.tl?' · TL: '+sch.tl:'');
+  document.getElementById('det-add-btn').style.display = (can('editAC')||can('editDM')) ? 'flex' : 'none';
+  showDT('staff',document.querySelector('.dtabs .dtab'));
+  om('ov-det');
+}
+
+function showDT(id,btn) {
+  ['staff','history','training','fb','allow'].forEach(t=>document.getElementById('dt-'+t).style.display='none');
+  document.getElementById('dt-'+id).style.display='block';
+  document.querySelectorAll('.dtabs .dtab').forEach(t=>t.classList.remove('on'));btn?.classList.add('on');
+  if(id==='staff')rDS();if(id==='history')rDH();if(id==='training')rDT();if(id==='fb')rDFB();if(id==='allow')rDA();
+}
+
+function rDS() {
+  const sch=db.schools.find(s=>s.id===curSid);
+  document.getElementById('dt-staff').innerHTML = `
+  <div style="background:var(--sur2);border:1px solid var(--c3);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:13px">
+    <span class="rtag r-tl">TL</span>
+    <strong>${sch.tl||'Not assigned'}</strong>
+    ${sch.tlEmail?`<a href="mailto:${sch.tlEmail}" style="font-size:12px;color:var(--blu)">${sch.tlEmail}</a>`:''}
+    ${can('editAC')?`<button class="btn btn-s mla" onclick="openTL('${sch.id}')">Edit TL</button>`:'<div class="mla"></div>'}
+  </div>
+  <div class="prof-grid">${['AC','DM','FDE'].map(role => {
+    const s=gAll(curSid).find(x=>x.role===role);
+    const canEdit=(role==='DM'&&can('editDM'))||(role!=='DM'&&can('editAC'));
+    if(s) return `<div class="pcard">
+      <div class="pcard-top"><span class="rtag ${rtc(role)}">${role}</span><span style="font-size:11px;color:var(--grn);font-weight:600">Active</span></div>
+      <div class="pcard-av ${avc(role)}">${ini(s.name)}</div>
+      <div class="pcard-name">${s.name}</div>
+      <div class="pcard-det">
+        <div class="pdr"><span class="pdr-l">${dlbl(role)}</span><span class="pdr-v">${fd(s.join)}</span></div>
+        <div class="pdr"><span class="pdr-l">Email</span><span class="pdr-v"><a href="mailto:${s.email}">${s.email||'—'}</a></span></div>
+        <div class="pdr"><span class="pdr-l">Phone</span><span class="pdr-v">${s.phone?`<a href="tel:${s.phone}">${s.phone}</a>`:'—'}</span></div>
+        ${role==='DM'?`<div class="pdr"><span class="pdr-l">Allowance</span><span class="pdr-v">${s.allow?'<span style="color:var(--blu);font-weight:600">Active</span>':'<span style="color:var(--ink4)">Stopped</span>'}</span></div>`:''}
+      </div>
+      ${canEdit?`<button class="btn btn-s btn-d" style="width:100%;justify-content:center;margin-top:10px" onclick="openLft('${s.id}')">Mark as Left</button>`:''}
+    </div>`;
+    return `<div class="pcard vacant">
+      <div class="pcard-top"><span class="rtag ${rtc(role)}">${role}</span><span style="font-size:11px;color:var(--red);font-weight:600">Vacant</span></div>
+      <div style="text-align:center;padding:22px 0;color:var(--ink4)"><div style="font-size:32px;margin-bottom:6px">&#128100;</div><div style="font-size:12px">No ${role} assigned</div></div>
+      ${canEdit?`<button class="btn btn-o btn-s" style="width:100%;justify-content:center" onclick="openAS('${curSid}','${role}')">+ Add ${role}</button>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function rDH() {
+  const hist = db.history.filter(h=>h.sid===curSid).sort((a,b)=>(b.changedAt||b.date||'').localeCompare(a.changedAt||a.date||''));
+  document.getElementById('dt-history').innerHTML = hist.length ? `<div class="tl">${hist.map(h=>`
+    <div class="tli">
+      <div class="tli-dot ${h.type==='joined'?'tli-j':h.type==='left'?'tli-l':'tli-sys'}"></div>
+      <div class="tli-card">
+        <div class="tli-top">
+          <span>${h.type==='joined'?'&#128100; Joined':h.type==='left'?'&#128075; Left':'&#9998; Changed'}</span>
+          <span class="tli-name">${h.name}</span>
+          <span class="rtag ${rtc(h.role)}">${h.role}</span>
+          ${h.changedBy?`<span class="tli-by">${h.changedBy}</span>`:''}
+          <span class="tli-date">${h.changedAt?fdt(h.changedAt):fd(h.date)}</span>
+        </div>
+        ${h.note?`<div class="tli-note">${h.note}</div>`:''}
+        <div class="tli-links">
+          ${h.email?`<a class="tli-link" href="mailto:${h.email}">&#9993; ${h.email}</a>`:''}
+          ${h.phone?`<a class="tli-link" href="tel:${h.phone}">&#128222; ${h.phone}</a>`:''}
+        </div>
+      </div>
+    </div>`).join('')}</div>` : '<div class="empty"><p>No history recorded yet</p></div>';
+}
+
+function rDT() {
+  const staff = gAll(curSid).filter(s => s.active && (s.role==='AC'||s.role==='DM'||s.role==='FDE'));
+  const trainings = [
+    {key:'lsq1', label:'LSQ Training Part 1', icon:'&#128203;', roles:['AC','FDE'], who:'tl'},
+    {key:'lsq2', label:'LSQ Training Part 2', icon:'&#128203;', roles:['AC','FDE'], who:'tl'},
+    {key:'c',    label:'Counselling Training', icon:'&#128172;', roles:['AC','FDE'], who:'tl'},
+    {key:'dm',   label:'DM Training',          icon:'&#128241;', roles:['AC','DM'],  who:'dm'},
+  ];
+  document.getElementById('dt-training').innerHTML = staff.length ? staff.map(s => {
+    const relevant = trainings.filter(t=>t.roles.includes(s.role));
+    if(!relevant.length) return '';
+    return `<div style="margin-bottom:18px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <div class="sav ${avc(s.role)}" style="font-size:9px">${ini(s.name)}</div>
+        ${s.name} <span class="rtag ${rtc(s.role)}">${s.role}</span>
+      </div>
+      ${relevant.map(t => {
+        const val = s.tr?.[t.key]||{s:'pending',d:''};
+        const canMark = (t.who==='tl'&&can('editAC'))||(t.who==='dm'&&can('editDM'));
+        return `<div class="tr-item">
+          <div class="tr-left"><div class="tr-icon">${t.icon}</div>
+            <div>
+              <div class="tr-name">${t.label}</div>
+              ${val.d?`<div class="tr-date">Completed: ${fd(val.d)}</div>`:''}
+            </div>
+          </div>
+          <div class="tr-right">${tB(val)}
+            ${val.s==='pending'&&canMark?`<button class="btn btn-o btn-s" onclick="openTrnMdl('${s.id}','${t.key}','${t.label}')">Mark Done</button>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('') : '<div class="empty"><p>No staff to track</p></div>';
+}
+
+function rDFB() {
+  const sch=db.schools.find(s=>s.id===curSid);
+  const dm=gR(curSid,'DM'),dmDone=dm?.tr?.dm?.s==='done';
+  document.getElementById('dt-fb').innerHTML = `
+    <div class="fb-box">
+      <div class="fb-head"><div class="fb-title">&#9000; Facebook Page Details</div>
+        ${can('editDM')?`<button class="btn btn-n btn-s" onclick="openFB('${sch.id}')">Edit &#9998;</button>`:''}
+      </div>
+      <div class="fb-row"><span class="fb-rl">Page ID</span><span class="fb-rv" style="font-family:monospace">${sch.fbId||'<em style="font-family:var(--fn);color:var(--ink4)">Not added</em>'}</span></div>
+      <div class="fb-row"><span class="fb-rl">Page URL</span><span class="fb-rv">${sch.fbUrl?`<a href="${sch.fbUrl}" target="_blank">${sch.fbUrl}</a>`:'<em style="color:var(--ink4)">Not added</em>'}</span></div>
+      <div class="fb-row">
+        <span class="fb-rl">Access Given</span>
+        <span class="fb-rv" style="display:flex;align-items:center;gap:8px">
+          <div class="fb-tick ${sch.fbAccess?'fb-tick-y':'fb-tick-n'}">${sch.fbAccess?'&#10003;':'&#10005;'}</div>
+          <span>${sch.fbAccess?'Yes — access shared':'Not yet given'}</span>
+          ${sch.fbAccess&&sch.fbDate?`<span style="font-size:11px;color:var(--ink4)">on ${fd(sch.fbDate)}</span>`:''}
+        </span>
+      </div>
+    </div>
+    <div class="fnote ${dmDone?'fn-g':'fn-a'}" style="margin-top:12px">
+      ${dmDone?'&#10003; DM Training complete — Facebook page access can be shared.':'&#9888; DM Training not yet completed. Share Facebook access only after DM Training is done.'}
+    </div>`;
+}
+
+function rDA() {
+  const dm=gR(curSid,'DM'),ac=gR(curSid,'AC');
+  document.getElementById('dt-allow').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="padding:16px;background:${ac?'#dcfce7':'var(--red2)'};border:1.5px solid ${ac?'var(--grn3)':'var(--red3)'};border-radius:var(--rl)">
+        <div class="fl" style="margin-bottom:6px">AC Status</div>
+        <div style="font-family:var(--sf);font-size:18px;font-weight:600;color:${ac?'var(--grn)':'var(--red)'}">${ac?ac.name:'Vacant'}</div>
+        ${ac?`<div style="font-size:11px;color:var(--ink4);margin-top:3px">${ac.email}</div>`:''}
+      </div>
+      <div style="padding:16px;background:${dm?.allow?'var(--blu2)':'var(--sur2)'};border:1.5px solid ${dm?.allow?'var(--blu3)':'var(--c3)'};border-radius:var(--rl)">
+        <div class="fl" style="margin-bottom:6px">DM Allowance</div>
+        <div style="font-family:var(--sf);font-size:18px;font-weight:600;color:${dm?.allow?'var(--blu)':'var(--ink4)'}">${dm?dm.allow?'Active':'Stopped':'No DM'}</div>
+        ${dm?`<div style="font-size:11px;color:var(--ink4);margin-top:3px">${dm.name}</div>`:''}
+      </div>
+    </div>
+    ${ac&&dm?.allow&&can('editDM')?`<div class="fnote fn-a" style="display:flex;align-items:center;justify-content:space-between"><div>AC is active — DM allowance must be stopped</div><button class="btn btn-s btn-d" onclick="stopAlw('${dm.id}');rDA()">Stop Now</button></div>`:''}`;
+}
+
+// ── ADD SCHOOL ──
+function openAddSch() {
+  if(!can('addSchool')){toast('Only Team Leader can add schools');return;}
+  ['sc-n','sc-z','sc-c','sc-tl','sc-tle','sc-fbid','sc-fburl'].forEach(id=>document.getElementById(id).value='');
+  om('ov-sch');
+}
+async function saveSch() {
+  const n=document.getElementById('sc-n').value.trim();if(!n){toast('School name required');return;}
+  const sch={id:'sch'+Date.now(),name:n,zone:document.getElementById('sc-z').value.trim(),city:document.getElementById('sc-c').value.trim(),tl:document.getElementById('sc-tl').value.trim(),tlEmail:document.getElementById('sc-tle').value.trim(),fbId:document.getElementById('sc-fbid').value.trim(),fbUrl:document.getElementById('sc-fburl').value.trim(),fbAccess:false,fbDate:''};
+  await api('addSchool', {data: sch, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  db.schools.push(sch);
+  cm('ov-sch');rSch();rDash();pSel();toast('School added');
+}
+
+// ── ADD STAFF ──
+function openAS(sid,role) {
+  ['st-n','st-e','st-p'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('st-j').value=td();
+  if(sid)document.getElementById('st-sid').value=sid;
+  if(role)document.getElementById('st-r').value=role;
+  document.getElementById('note-dm').style.display='none';document.getElementById('note-ac').style.display='none';
+  rChg();om('ov-stf');
+}
+function rChg() {
+  const r=document.getElementById('st-r').value;
+  document.getElementById('note-dm').style.display=r==='DM'?'block':'none';
+  document.getElementById('note-ac').style.display=r==='AC'?'block':'none';
+  document.getElementById('dlbl').textContent=dlbl(r)+' *';
+}
+async function saveStf() {
+  const n=document.getElementById('st-n').value.trim(),role=document.getElementById('st-r').value,join=document.getElementById('st-j').value,sid=document.getElementById('st-sid').value;
+  if(!n||!join){toast('Name and date required');return;}
+  // Permission check
+  if(role==='DM'&&!can('editDM')){toast('Only DM Admin can add DM staff');return;}
+  if(role!=='DM'&&!can('editAC')){toast('Only Team Leader can add AC/FDE');return;}
+  const lsqC = role==='AC'||role==='FDE' ? 'pending' : 'na';
+  const dmC  = role==='AC'||role==='DM'  ? 'pending' : 'na';
+  const s={id:'p'+Date.now(),sid,name:n,role,email:document.getElementById('st-e').value.trim(),phone:document.getElementById('st-p').value.trim(),join,active:true,allow:role==='DM',tr:{lsq1:{s:lsqC,d:''},lsq2:{s:lsqC,d:''},c:{s:lsqC,d:''},dm:{s:dmC,d:''}}};
+  await api('addStaff', {data: s, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  db.staff.push(s);
+  db.history.push({id:'h'+Date.now(),sid,type:'joined',role,name:n,email:s.email,phone:s.phone,date:join,note:'Added by '+whoLabel(),changedBy:whoLabel(),changedAt:new Date().toISOString()});
+  if(role==='AC'){const dm=gR(sid,'DM');if(dm?.allow)toast('AC added — check DM allowance!');}
+  cm('ov-stf');if(curSid===sid)rDS();rDash();rSch();toast(n+' added as '+role);
+}
+
+// ── MARK LEFT ──
+function openLft(id) {
+  lvid=id;const s=db.staff.find(x=>x.id===id),sch=db.schools.find(sc=>sc.id===s.sid);
+  document.getElementById('lft-ms').textContent=s.name+' ('+s.role+') — '+sch?.name;
+  document.getElementById('lv-d').value=td();document.getElementById('lv-nt').value='';
+  om('ov-lft');
+}
+async function confLeft() {
+  const s=db.staff.find(x=>x.id===lvid),date=document.getElementById('lv-d').value,reason=document.getElementById('lv-r').value,note=document.getElementById('lv-nt').value;
+  await api('markLeft', {id:lvid, date, reason, note, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  s.active=false;
+  db.history.push({id:'h'+Date.now(),sid:s.sid,type:'left',role:s.role,name:s.name,email:s.email||'',phone:s.phone||'',date,note:reason+(note?' — '+note:''),changedBy:whoLabel(),changedAt:new Date().toISOString()});
+  cm('ov-lft');if(curSid===s.sid){rDS();rDH();}rDash();rSch();toast(s.name+' marked as left');
+}
+
+// ── TRAINING ──
+function openTrnMdl(id,k,lbl) {
+  trnStaffId=id;trnKey=k;
+  document.getElementById('trn-ms').textContent='Marking complete: '+lbl;
+  document.getElementById('trn-d').value=td();
+  om('ov-trn');
+}
+async function confTrn() {
+  const s=db.staff.find(x=>x.id===trnStaffId);
+  const d=document.getElementById('trn-d').value;
+  if(!s.tr)s.tr={};s.tr[trnKey]={s:'done',d};
+  await api('updateTraining', {id:trnStaffId, key:trnKey, date:d, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  logLocal(s.sid,'Training completed: '+trnKey,s.role+': '+s.name,'training');
+  cm('ov-trn');if(curSid===s.sid)rDT();rTrain();toast('Training marked complete');
+}
+
+// ── FACEBOOK ──
+function openFB(sid) {
+  fbSid=sid;const sch=db.schools.find(s=>s.id===sid);
+  document.getElementById('fb-ms').textContent=sch.name;
+  document.getElementById('fb-id').value=sch.fbId||'';document.getElementById('fb-url').value=sch.fbUrl||'';
+  document.getElementById('fb-acc').checked=sch.fbAccess||false;document.getElementById('fb-date').value=sch.fbDate||'';
+  om('ov-fb');
+}
+async function saveFB() {
+  const sch=db.schools.find(s=>s.id===fbSid);
+  const data={id:fbSid,fbId:document.getElementById('fb-id').value.trim(),fbUrl:document.getElementById('fb-url').value.trim(),fbAccess:document.getElementById('fb-acc').checked,fbDate:document.getElementById('fb-date').value,changedBy:whoLabel(),changedAt:new Date().toISOString()};
+  await api('updateFacebook', {data});
+  Object.assign(sch, {fbId:data.fbId,fbUrl:data.fbUrl,fbAccess:data.fbAccess,fbDate:data.fbDate});
+  logLocal(fbSid, data.fbAccess?'Facebook access given':'Facebook page ID updated', 'FB: '+data.fbId, 'facebook');
+  cm('ov-fb');if(curSid===fbSid)rDFB();rFB();rDash();toast('Facebook info saved');
+}
+
+// ── TEAM LEADER ──
+function openTL(sid) {
+  tlSid=sid;const sch=db.schools.find(s=>s.id===sid);
+  document.getElementById('tl-ms').textContent=sch.name;
+  document.getElementById('tl-n').value=sch.tl||'';document.getElementById('tl-e').value=sch.tlEmail||'';
+  om('ov-tl');
+}
+async function saveTL() {
+  const sch=db.schools.find(s=>s.id===tlSid);
+  const tl=document.getElementById('tl-n').value.trim(),tle=document.getElementById('tl-e').value.trim();
+  await api('updateTL', {id:tlSid, tl, tlEmail:tle, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  sch.tl=tl;sch.tlEmail=tle;
+  cm('ov-tl');if(curSid===tlSid)rDS();rSch();rDash();toast('Team Leader updated');
+}
+
+// ── REQUEST ──
+function openReq(sid) {
+  if(sid)document.getElementById('rq-s').value=sid;
+  ['rq-n','rq-c','rq-nt'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rq-d').value=td();
+  om('ov-req');
+}
+async function subReq() {
+  const n=document.getElementById('rq-n').value.trim();if(!n){toast('Name required');return;}
+  const r={id:'r'+Date.now(),sid:document.getElementById('rq-s').value,type:document.getElementById('rq-t').value,role:document.getElementById('rq-r').value,name:n,date:document.getElementById('rq-d').value,contact:document.getElementById('rq-c').value.trim(),notes:document.getElementById('rq-nt').value.trim(),status:'pending',sub:td()};
+  await api('addRequest', {data: r, changedBy: whoLabel()});
+  db.requests.push(r);
+  cm('ov-req');rReqs();document.getElementById('rqb').textContent=db.requests.filter(r=>r.status==='pending').length;toast('Request logged');
+}
+
+// ── SEARCH ──
+function doSearch(q) {
+  if(!q.trim()){rSch();return;}q=q.toLowerCase();
+  const r=db.schools.filter(s=>s.name.toLowerCase().includes(q)||s.zone?.toLowerCase().includes(q)||s.tl?.toLowerCase().includes(q)||gAll(s.id).some(st=>st.name.toLowerCase().includes(q)||st.email?.toLowerCase().includes(q)));
+  document.getElementById('sgrid').innerHTML=r.map(sCard).join('')||'<div class="empty"><p>No results found</p></div>';
+  gp('schools',document.querySelectorAll('.nl')[1]);
+}
+
+// ── EXCEL EXPORTS ──
+function exportTrainingExcel() {
+  const rows = [['School','Name','Role','LSQ Part 1 Status','LSQ Part 1 Date','LSQ Part 2 Status','LSQ Part 2 Date','Counselling Status','Counselling Date','DM Training Status','DM Training Date','Joining/Resp Date']];
+  db.staff.filter(s=>s.active&&(s.role==='AC'||s.role==='DM'||s.role==='FDE')).forEach(s=>{
+    const sch=db.schools.find(sc=>sc.id===s.sid),t=s.tr||{};
+    rows.push([sch?.name||'',s.name,s.role,t.lsq1?.s||'',t.lsq1?.d||'',t.lsq2?.s||'',t.lsq2?.d||'',t.c?.s||'',t.c?.d||'',t.dm?.s||'',t.dm?.d||'',s.join||'']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Training');
+  XLSX.writeFile(wb,'Podar_Training_'+td()+'.xlsx');
+}
+
+function exportFBExcel() {
+  const rows=[['School','Zone','DM Name','DM Email','DM Training','FB Page ID','FB Page URL','Access Given','Access Date']];
+  db.schools.forEach(sch=>{
+    const dm=gR(sch.id,'DM');
+    rows.push([sch.name,sch.zone||'',dm?.name||'',dm?.email||'',dm?.tr?.dm?.s||'',sch.fbId||'',sch.fbUrl||'',sch.fbAccess?'Yes':'No',sch.fbDate||'']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Facebook');
+  XLSX.writeFile(wb,'Podar_Facebook_'+td()+'.xlsx');
+}
+
+function exportAuditExcel() {
+  const rows=[['Date & Time','Changed By','School','Role','Action','Details','Staff Email','Staff Phone']];
+  db.history.sort((a,b)=>(b.changedAt||'').localeCompare(a.changedAt||'')).forEach(h=>{
+    const sch=db.schools.find(s=>s.id===h.sid);
+    rows.push([h.changedAt?new Date(h.changedAt).toLocaleString('en-IN'):'',h.changedBy||'',sch?.name||'',h.role,h.type,h.name+(h.note?' — '+h.note:''),h.email||'',h.phone||'']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Audit Log');
+  XLSX.writeFile(wb,'Podar_Audit_'+td()+'.xlsx');
+}
+
+// ── UTILS ──
+function om(id){document.getElementById(id).classList.add('open');}
+function cm(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3000);}
+</script>
+</body>
+</html>
