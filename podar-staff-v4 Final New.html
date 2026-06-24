@@ -388,7 +388,7 @@ body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;l
   </div>
   <div class="fnote fn-b" style="margin-bottom:16px">Share Facebook page access after DM Training is completed. Record the Page ID and mark access given with the date.</div>
   <div style="background:var(--sur);border:1px solid var(--c3);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)">
-    <table class="tbl"><thead><tr><th>School</th><th>Zone</th><th>DM Staff</th><th>DM Training</th><th>Facebook Page ID</th><th>Access Given</th><th>Date</th><th id="fb-action-th"></th></tr></thead>
+    <table class="tbl"><thead><tr><th>School</th><th>Zone</th><th>DM Staff</th><th>DM Training</th><th>Facebook</th><th>Instagram</th><th>Access Given</th><th>Date</th><th id="fb-action-th"></th></tr></thead>
     <tbody id="fbtbody"></tbody></table>
   </div>
 </div>
@@ -454,8 +454,8 @@ body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;l
         <div class="fg"><label class="fl">TL Email</label><input class="fi" id="sc-tle" placeholder="tl@podar.org"/></div>
       </div>
       <div class="frow">
-        <div class="fg"><label class="fl">Facebook Page ID</label><input class="fi" id="sc-fbid" placeholder="e.g. pis.cbse.sawangi"/></div>
-        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="sc-fburl" placeholder="https://facebook.com/..."/></div>
+        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="sc-fburl" placeholder="https://facebook.com/pis.cbse.sawangi"/></div>
+        <div class="fg"><label class="fl">Instagram Profile URL</label><input class="fi" id="sc-igurl" placeholder="https://instagram.com/pis_cbse_sawangi"/></div>
       </div>
     </div>
     <div class="mf"><button class="btn" onclick="cm('ov-sch')">Cancel</button><button class="btn btn-o" onclick="saveSch()">Save School</button></div>
@@ -517,15 +517,15 @@ body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;l
   </div>
 </div>
 
-<!-- FACEBOOK EDIT -->
+<!-- SOCIAL MEDIA EDIT -->
 <div class="ov" id="ov-fb">
   <div class="modal">
-    <div class="mh"><div><div class="mt">Facebook Page Details</div><div class="ms" id="fb-ms">Edit Facebook info</div></div><button class="mc" onclick="cm('ov-fb')">&#10005;</button></div>
+    <div class="mh"><div><div class="mt">Social Media Details</div><div class="ms" id="fb-ms">Facebook + Instagram info for this school</div></div><button class="mc" onclick="cm('ov-fb')">&#10005;</button></div>
     <div class="mb">
-      <div class="fnote fn-b" style="margin-bottom:14px">Share Facebook access only after DM Training is completed. Record Page ID and tick once access is given.</div>
+      <div class="fnote fn-b" style="margin-bottom:14px">Share Facebook access only after DM Training is completed. Tick the box once access is given.</div>
       <div class="frow">
-        <div class="fg"><label class="fl">Facebook Page ID</label><input class="fi" id="fb-id" placeholder="e.g. pis.cbse.sawangi"/></div>
-        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="fb-url" placeholder="https://facebook.com/..."/></div>
+        <div class="fg"><label class="fl">Facebook Page URL</label><input class="fi" id="fb-url" placeholder="https://facebook.com/pis.cbse.sawangi"/></div>
+        <div class="fg"><label class="fl">Instagram Profile URL</label><input class="fi" id="insta-url" placeholder="https://instagram.com/pis_cbse_sawangi"/></div>
       </div>
       <div class="fg">
         <label class="fl">Page Access Given?</label>
@@ -657,7 +657,7 @@ function handleLocal(action, p) {
       if(ts){if(!ts.tr)ts.tr={};ts.tr[p.key]={s:'done',d:p.date};} saveLocal(); return {ok:true};
     case 'updateFacebook':
       const fsch = db.schools.find(x=>x.id===p.data.id);
-      if(fsch){Object.assign(fsch,{fbId:p.data.fbId,fbUrl:p.data.fbUrl,fbAccess:p.data.fbAccess,fbDate:p.data.fbDate});} saveLocal(); return {ok:true};
+      if(fsch){Object.assign(fsch,{fbUrl:p.data.fbUrl,igUrl:p.data.igUrl,fbAccess:p.data.fbAccess,fbDate:p.data.fbDate});} saveLocal(); return {ok:true};
     case 'updateAllowance':
       const as = db.staff.find(x=>x.id===p.id);
       if(as){as.allow=p.allow;} saveLocal(); return {ok:true};
@@ -711,6 +711,7 @@ async function doLogin() {
 
     if(res.ok) {
       currentRole = selectedRole;
+      sessionStorage.setItem('psm_role', currentRole);
       document.getElementById('login-wrap').classList.add('hidden');
       document.getElementById('loading-screen').classList.remove('hidden');
       document.getElementById('load-text').textContent = IS_LOCAL ? 'Loading local data...' : 'Loading from Google Sheets...';
@@ -733,6 +734,7 @@ async function doLogin() {
 
 function doLogout() {
   currentRole = null;
+  sessionStorage.removeItem('psm_role');
   db = {schools:[],staff:[],history:[],requests:[]};
   document.getElementById('main-nav').style.display = 'none';
   document.querySelector('.login-wrap').classList.remove('hidden');
@@ -919,16 +921,18 @@ function rAllow() {
 }
 
 async function stopAlw(id) {
-  await api('updateAllowance', {id, allow: false, changedBy: whoLabel(), changedAt: new Date().toISOString()});
-  const s=db.staff.find(x=>x.id===id);s.allow=false;
+  const s=db.staff.find(x=>x.id===id);
+  s.allow=false;
   logLocal(s.sid,'Stopped DM allowance','DM: '+s.name,'allowance');
   rAllow();rDash();toast('DM allowance stopped for '+s.name);
+  try { await api('updateAllowance', {id, allow: false, changedBy: whoLabel(), changedAt: new Date().toISOString()}); } catch(e) {}
 }
 async function startAlw(id) {
-  await api('updateAllowance', {id, allow: true, changedBy: whoLabel(), changedAt: new Date().toISOString()});
-  const s=db.staff.find(x=>x.id===id);s.allow=true;
+  const s=db.staff.find(x=>x.id===id);
+  s.allow=true;
   logLocal(s.sid,'Activated DM allowance','DM: '+s.name,'allowance');
-  rAllow();toast('Allowance activated for '+s.name);
+  rAllow();rDash();toast('Allowance activated for '+s.name);
+  try { await api('updateAllowance', {id, allow: true, changedBy: whoLabel(), changedAt: new Date().toISOString()}); } catch(e) {}
 }
 
 function rFB() {
@@ -941,12 +945,13 @@ function rFB() {
       <td style="font-size:12px;color:var(--ink4)">${sch.zone||'—'}</td>
       <td>${dm?`<div style="font-weight:500">${dm.name}</div><div style="font-size:11px;color:var(--ink4)">${dm.email}</div>`:'<span style="color:var(--ink4);font-style:italic">No DM</span>'}</td>
       <td>${dm?tB(dm.tr?.dm):'<span class="tst tst-n">N/A</span>'}</td>
-      <td style="font-family:monospace;font-size:12px">${sch.fbId||`<span style="color:var(--ink4);font-style:italic;font-family:var(--fn)">Not set</span>`}</td>
+      <td style="font-size:12px">${sch.fbUrl?`<a href="${sch.fbUrl}" target="_blank">View &#8599;</a>`:`<span style="color:var(--ink4);font-style:italic">Not added</span>`}</td>
+      <td style="font-size:12px">${sch.igUrl?`<a href="${sch.igUrl}" target="_blank">View &#8599;</a>`:`<span style="color:var(--ink4);font-style:italic">Not added</span>`}</td>
       <td><div style="display:inline-flex;align-items:center;gap:6px"><div class="fb-tick ${sch.fbAccess?'fb-tick-y':'fb-tick-n'}">${sch.fbAccess?'&#10003;':'&#10005;'}</div><span style="font-size:12px">${sch.fbAccess?'Given':'Not yet'}</span></div></td>
       <td style="font-size:12px;color:var(--ink3)">${sch.fbAccess&&sch.fbDate?fd(sch.fbDate):'—'}</td>
       <td>${can('editDM')?`<button class="btn btn-s" onclick="openFB('${sch.id}')">Edit &#9998;</button>`:''}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:32px">No records</td></tr>';
+  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--ink4);padding:32px">No records</td></tr>';
 }
 
 function rReqs() {
@@ -1133,11 +1138,11 @@ function rDFB() {
   const dm=gR(curSid,'DM'),dmDone=dm?.tr?.dm?.s==='done';
   document.getElementById('dt-fb').innerHTML = `
     <div class="fb-box">
-      <div class="fb-head"><div class="fb-title">&#9000; Facebook Page Details</div>
+      <div class="fb-head"><div class="fb-title">&#9000; Social Media Details</div>
         ${can('editDM')?`<button class="btn btn-n btn-s" onclick="openFB('${sch.id}')">Edit &#9998;</button>`:''}
       </div>
-      <div class="fb-row"><span class="fb-rl">Page ID</span><span class="fb-rv" style="font-family:monospace">${sch.fbId||'<em style="font-family:var(--fn);color:var(--ink4)">Not added</em>'}</span></div>
-      <div class="fb-row"><span class="fb-rl">Page URL</span><span class="fb-rv">${sch.fbUrl?`<a href="${sch.fbUrl}" target="_blank">${sch.fbUrl}</a>`:'<em style="color:var(--ink4)">Not added</em>'}</span></div>
+      <div class="fb-row"><span class="fb-rl">Facebook URL</span><span class="fb-rv">${sch.fbUrl?`<a href="${sch.fbUrl}" target="_blank">${sch.fbUrl}</a>`:'<em style="color:var(--ink4)">Not added</em>'}</span></div>
+      <div class="fb-row"><span class="fb-rl">Instagram URL</span><span class="fb-rv">${sch.igUrl?`<a href="${sch.igUrl}" target="_blank">${sch.igUrl}</a>`:'<em style="color:var(--ink4)">Not added</em>'}</span></div>
       <div class="fb-row">
         <span class="fb-rl">Access Given</span>
         <span class="fb-rv" style="display:flex;align-items:center;gap:8px">
@@ -1172,13 +1177,13 @@ function rDA() {
 
 // ── ADD SCHOOL ──
 function openAddSch() {
-  if(!can('addSchool')){toast('Only Team Leader can add schools');return;}
-  ['sc-n','sc-z','sc-c','sc-tl','sc-tle','sc-fbid','sc-fburl'].forEach(id=>document.getElementById(id).value='');
+  if(!can('addSchool')){toast('You do not have permission to add schools');return;}
+  ['sc-n','sc-z','sc-c','sc-tl','sc-tle','sc-fburl','sc-igurl'].forEach(id=>document.getElementById(id).value='');
   om('ov-sch');
 }
 async function saveSch() {
   const n=document.getElementById('sc-n').value.trim();if(!n){toast('School name required');return;}
-  const sch={id:'sch'+Date.now(),name:n,zone:document.getElementById('sc-z').value.trim(),city:document.getElementById('sc-c').value.trim(),tl:document.getElementById('sc-tl').value.trim(),tlEmail:document.getElementById('sc-tle').value.trim(),fbId:document.getElementById('sc-fbid').value.trim(),fbUrl:document.getElementById('sc-fburl').value.trim(),fbAccess:false,fbDate:''};
+  const sch={id:'sch'+Date.now(),name:n,zone:document.getElementById('sc-z').value.trim(),city:document.getElementById('sc-c').value.trim(),tl:document.getElementById('sc-tl').value.trim(),tlEmail:document.getElementById('sc-tle').value.trim(),fbUrl:document.getElementById('sc-fburl').value.trim(),igUrl:document.getElementById('sc-igurl').value.trim(),fbAccess:false,fbDate:''};
   await api('addSchool', {data: sch, changedBy: whoLabel(), changedAt: new Date().toISOString()});
   db.schools.push(sch);
   cm('ov-sch');rSch();rDash();pSel();toast('School added');
@@ -1208,11 +1213,20 @@ async function saveStf() {
   const lsqC = role==='AC'||role==='FDE' ? 'pending' : 'na';
   const dmC  = role==='AC'||role==='DM'  ? 'pending' : 'na';
   const s={id:'p'+Date.now(),sid,name:n,role,email:document.getElementById('st-e').value.trim(),phone:document.getElementById('st-p').value.trim(),join,active:true,allow:role==='DM',tr:{lsq1:{s:lsqC,d:''},lsq2:{s:lsqC,d:''},c:{s:lsqC,d:''},dm:{s:dmC,d:''}}};
-  await api('addStaff', {data: s, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  // ── OPTIMISTIC UPDATE: update local DB and UI immediately ──
   db.staff.push(s);
   db.history.push({id:'h'+Date.now(),sid,type:'joined',role,name:n,email:s.email,phone:s.phone,date:join,note:'Added by '+whoLabel(),changedBy:whoLabel(),changedAt:new Date().toISOString()});
   if(role==='AC'){const dm=gR(sid,'DM');if(dm?.allow)toast('AC added — check DM allowance!');}
-  cm('ov-stf');if(curSid===sid)rDS();rDash();rSch();toast(n+' added as '+role);
+  cm('ov-stf');
+  if(curSid===sid){rDS();rDH();}
+  rDash();rSch();
+  toast(n+' added as '+role);
+  // ── SAVE TO SHEETS IN BACKGROUND ──
+  try {
+    await api('addStaff', {data: s, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+  } catch(e) {
+    // Data is in local db; will sync on next full load
+  }
 }
 
 // ── MARK LEFT ──
@@ -1224,10 +1238,17 @@ function openLft(id) {
 }
 async function confLeft() {
   const s=db.staff.find(x=>x.id===lvid),date=document.getElementById('lv-d').value,reason=document.getElementById('lv-r').value,note=document.getElementById('lv-nt').value;
-  await api('markLeft', {id:lvid, date, reason, note, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  // ── OPTIMISTIC UPDATE ──
   s.active=false;
   db.history.push({id:'h'+Date.now(),sid:s.sid,type:'left',role:s.role,name:s.name,email:s.email||'',phone:s.phone||'',date,note:reason+(note?' — '+note:''),changedBy:whoLabel(),changedAt:new Date().toISOString()});
-  cm('ov-lft');if(curSid===s.sid){rDS();rDH();}rDash();rSch();toast(s.name+' marked as left');
+  cm('ov-lft');
+  if(curSid===s.sid){rDS();rDH();}
+  rDash();rSch();
+  toast(s.name+' marked as left');
+  // ── SAVE TO SHEETS IN BACKGROUND ──
+  try {
+    await api('markLeft', {id:lvid, date, reason, note, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  } catch(e) {}
 }
 
 // ── TRAINING ──
@@ -1240,27 +1261,37 @@ function openTrnMdl(id,k,lbl) {
 async function confTrn() {
   const s=db.staff.find(x=>x.id===trnStaffId);
   const d=document.getElementById('trn-d').value;
-  if(!s.tr)s.tr={};s.tr[trnKey]={s:'done',d};
-  await api('updateTraining', {id:trnStaffId, key:trnKey, date:d, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  if(!s.tr)s.tr={};
+  s.tr[trnKey]={s:'done',d};
+  // ── OPTIMISTIC UPDATE: update UI immediately ──
   logLocal(s.sid,'Training completed: '+trnKey,s.role+': '+s.name,'training');
-  cm('ov-trn');if(curSid===s.sid)rDT();rTrain();toast('Training marked complete');
+  cm('ov-trn');
+  if(curSid===s.sid)rDT();
+  rTrain();
+  rDash();
+  toast('Training marked complete');
+  // ── SAVE TO SHEETS IN BACKGROUND ──
+  try {
+    await api('updateTraining', {id:trnStaffId, key:trnKey, date:d, changedBy:whoLabel(), changedAt:new Date().toISOString()});
+  } catch(e) {}
 }
 
-// ── FACEBOOK ──
+// ── FACEBOOK + INSTAGRAM ──
 function openFB(sid) {
   fbSid=sid;const sch=db.schools.find(s=>s.id===sid);
   document.getElementById('fb-ms').textContent=sch.name;
-  document.getElementById('fb-id').value=sch.fbId||'';document.getElementById('fb-url').value=sch.fbUrl||'';
+  document.getElementById('fb-url').value=sch.fbUrl||'';
+  document.getElementById('insta-url').value=sch.igUrl||'';
   document.getElementById('fb-acc').checked=sch.fbAccess||false;document.getElementById('fb-date').value=sch.fbDate||'';
   om('ov-fb');
 }
 async function saveFB() {
   const sch=db.schools.find(s=>s.id===fbSid);
-  const data={id:fbSid,fbId:document.getElementById('fb-id').value.trim(),fbUrl:document.getElementById('fb-url').value.trim(),fbAccess:document.getElementById('fb-acc').checked,fbDate:document.getElementById('fb-date').value,changedBy:whoLabel(),changedAt:new Date().toISOString()};
+  const data={id:fbSid,fbUrl:document.getElementById('fb-url').value.trim(),igUrl:document.getElementById('insta-url').value.trim(),fbAccess:document.getElementById('fb-acc').checked,fbDate:document.getElementById('fb-date').value,changedBy:whoLabel(),changedAt:new Date().toISOString()};
   await api('updateFacebook', {data});
-  Object.assign(sch, {fbId:data.fbId,fbUrl:data.fbUrl,fbAccess:data.fbAccess,fbDate:data.fbDate});
-  logLocal(fbSid, data.fbAccess?'Facebook access given':'Facebook page ID updated', 'FB: '+data.fbId, 'facebook');
-  cm('ov-fb');if(curSid===fbSid)rDFB();rFB();rDash();toast('Facebook info saved');
+  Object.assign(sch, {fbUrl:data.fbUrl,igUrl:data.igUrl,fbAccess:data.fbAccess,fbDate:data.fbDate});
+  logLocal(fbSid, data.fbAccess?'Facebook/Instagram access given':'Facebook/Instagram URLs updated', 'Social: '+sch.name, 'facebook');
+  cm('ov-fb');if(curSid===fbSid)rDFB();rFB();rDash();toast('Social media info saved');
 }
 
 // ── TEAM LEADER ──
@@ -1314,13 +1345,13 @@ function exportTrainingExcel() {
 }
 
 function exportFBExcel() {
-  const rows=[['School','Zone','DM Name','DM Email','DM Training','FB Page ID','FB Page URL','Access Given','Access Date']];
+  const rows=[['School','Zone','DM Name','DM Email','DM Training','Facebook URL','Instagram URL','Access Given','Access Date']];
   db.schools.forEach(sch=>{
     const dm=gR(sch.id,'DM');
-    rows.push([sch.name,sch.zone||'',dm?.name||'',dm?.email||'',dm?.tr?.dm?.s||'',sch.fbId||'',sch.fbUrl||'',sch.fbAccess?'Yes':'No',sch.fbDate||'']);
+    rows.push([sch.name,sch.zone||'',dm?.name||'',dm?.email||'',dm?.tr?.dm?.s||'',sch.fbUrl||'',sch.igUrl||'',sch.fbAccess?'Yes':'No',sch.fbDate||'']);
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Facebook');
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Social Media');
   XLSX.writeFile(wb,'Podar_Facebook_'+td()+'.xlsx');
 }
 
@@ -1340,6 +1371,28 @@ function om(id){document.getElementById(id).classList.add('open');}
 function cm(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3000);}
+
+// ── AUTO-RESTORE SESSION ON PAGE REFRESH ──
+(async function restoreSession() {
+  const saved = sessionStorage.getItem('psm_role');
+  if(!saved) return;
+  currentRole = saved;
+  document.getElementById('login-wrap').classList.add('hidden');
+  document.getElementById('loading-screen').classList.remove('hidden');
+  document.getElementById('load-text').textContent = IS_LOCAL ? 'Loading local data...' : 'Loading from Google Sheets...';
+  try {
+    await loadData();
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.getElementById('main-nav').style.display = 'flex';
+    setupRoleUI();
+    rDash();
+  } catch(e) {
+    sessionStorage.removeItem('psm_role');
+    currentRole = null;
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.getElementById('login-wrap').classList.remove('hidden');
+  }
+})();
 </script>
 </body>
 </html>
