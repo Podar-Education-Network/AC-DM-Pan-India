@@ -240,6 +240,14 @@ body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;l
 .saving-dot{width:8px;height:8px;border-radius:50%;background:var(--ora);animation:pulse 1s ease infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* ── SYNC BUTTON ── */
+.nav-sync{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.85);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:15px;line-height:1;transition:all .15s;display:flex;align-items:center;gap:5px}
+.nav-sync:hover{background:rgba(255,255,255,.2)}
+.nav-sync .sync-icon{display:inline-block;transition:transform .3s}
+.nav-sync.spinning .sync-icon{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-label{font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap}
+
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px}
 </style>
 </head>
@@ -310,6 +318,10 @@ body{font-family:var(--fn);background:var(--c);color:var(--ink);font-size:14px;l
       <span style="color:rgba(255,255,255,.3);font-size:11px">&#9906;</span>
       <input id="gsrch" placeholder="Search school or staff..." oninput="doSearch(this.value)"/>
     </div>
+    <button class="nav-sync" id="nav-sync-btn" onclick="manualSync()" title="Pull latest data from Google Sheets">
+      <span class="sync-icon">&#8635;</span>
+    </button>
+    <span class="sync-label" id="sync-time"></span>
     <span class="role-badge" id="role-badge">View</span>
     <button class="nav-logout" onclick="doLogout()">Logout</button>
   </div>
@@ -720,6 +732,7 @@ async function doLogin() {
       document.getElementById('main-nav').style.display = 'flex';
       setupRoleUI();
       rDash();
+      startAutoSync();
     } else {
       document.getElementById('login-err').style.display = 'block';
       loginBtn.innerHTML = selectedRole === 'view' ? 'Enter as Viewer &rarr;' : 'Login &rarr;';
@@ -735,6 +748,8 @@ async function doLogin() {
 function doLogout() {
   currentRole = null;
   sessionStorage.removeItem('psm_role');
+  if(_syncTimer)      clearInterval(_syncTimer);
+  if(_syncLabelTimer) clearInterval(_syncLabelTimer);
   db = {schools:[],staff:[],history:[],requests:[]};
   document.getElementById('main-nav').style.display = 'none';
   document.querySelector('.login-wrap').classList.remove('hidden');
@@ -981,26 +996,30 @@ async function appR(id) {
   if(r.type==='new_join') {
     const ns={id:'p'+Date.now(),sid:r.sid,name:r.name,role:r.role,email:r.contact||'',phone:'',join:r.date,active:true,allow:r.role==='DM',
       tr:{lsq1:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},lsq2:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},c:{s:(r.role==='FDE'||r.role==='AC')?'pending':'na',d:''},dm:{s:(r.role==='AC'||r.role==='DM')?'pending':'na',d:''}}};
-    await api('addStaff', {data: ns, changedBy: whoLabel(), changedAt: new Date().toISOString()});
     db.staff.push(ns);
     logLocal(r.sid,'Approved joining request',r.role+': '+r.name,'request');
     if(r.role==='AC'){const dm=gR(r.sid,'DM');if(dm?.allow)toast('AC added — check DM allowance!');}
+    try {
+      await api('addStaff', {data: ns, changedBy: whoLabel(), changedAt: new Date().toISOString()});
+    } catch(e) {}
   } else if(r.type==='left') {
     const s=db.staff.find(x=>x.sid===r.sid&&x.name===r.name&&x.active);
     if(s){
-      await api('markLeft', {id:s.id, date:r.date, reason:'Request approved', changedBy:whoLabel(), changedAt:new Date().toISOString()});
       s.active=false;
       logLocal(r.sid,'Approved exit request',r.role+': '+r.name,'request');
+      try {
+        await api('markLeft', {id:s.id, date:r.date, reason:'Request approved', changedBy:whoLabel(), changedAt:new Date().toISOString()});
+      } catch(e) {}
     }
   }
   r.status='approved';
-  await api('updateRequest', {id, status:'approved', changedBy: whoLabel()});
-  rReqs();rDash();toast('Request approved');
+  rReqs();rDash();rSch();toast('Request approved');
+  try { await api('updateRequest', {id, status:'approved', changedBy: whoLabel()}); } catch(e) {}
 }
 async function rejR(id) {
-  await api('updateRequest', {id, status:'rejected', changedBy: whoLabel()});
   db.requests.find(x=>x.id===id).status='rejected';
-  rReqs();toast('Request rejected');
+  rReqs();rDash();toast('Request rejected');
+  try { await api('updateRequest', {id, status:'rejected', changedBy: whoLabel()}); } catch(e) {}
 }
 
 function rAudit() {
@@ -1184,9 +1203,9 @@ function openAddSch() {
 async function saveSch() {
   const n=document.getElementById('sc-n').value.trim();if(!n){toast('School name required');return;}
   const sch={id:'sch'+Date.now(),name:n,zone:document.getElementById('sc-z').value.trim(),city:document.getElementById('sc-c').value.trim(),tl:document.getElementById('sc-tl').value.trim(),tlEmail:document.getElementById('sc-tle').value.trim(),fbUrl:document.getElementById('sc-fburl').value.trim(),igUrl:document.getElementById('sc-igurl').value.trim(),fbAccess:false,fbDate:''};
-  await api('addSchool', {data: sch, changedBy: whoLabel(), changedAt: new Date().toISOString()});
   db.schools.push(sch);
   cm('ov-sch');rSch();rDash();pSel();toast('School added');
+  try { await api('addSchool', {data: sch, changedBy: whoLabel(), changedAt: new Date().toISOString()}); } catch(e) {}
 }
 
 // ── ADD STAFF ──
@@ -1288,10 +1307,10 @@ function openFB(sid) {
 async function saveFB() {
   const sch=db.schools.find(s=>s.id===fbSid);
   const data={id:fbSid,fbUrl:document.getElementById('fb-url').value.trim(),igUrl:document.getElementById('insta-url').value.trim(),fbAccess:document.getElementById('fb-acc').checked,fbDate:document.getElementById('fb-date').value,changedBy:whoLabel(),changedAt:new Date().toISOString()};
-  await api('updateFacebook', {data});
   Object.assign(sch, {fbUrl:data.fbUrl,igUrl:data.igUrl,fbAccess:data.fbAccess,fbDate:data.fbDate});
   logLocal(fbSid, data.fbAccess?'Facebook/Instagram access given':'Facebook/Instagram URLs updated', 'Social: '+sch.name, 'facebook');
   cm('ov-fb');if(curSid===fbSid)rDFB();rFB();rDash();toast('Social media info saved');
+  try { await api('updateFacebook', {data}); } catch(e) {}
 }
 
 // ── TEAM LEADER ──
@@ -1304,9 +1323,9 @@ function openTL(sid) {
 async function saveTL() {
   const sch=db.schools.find(s=>s.id===tlSid);
   const tl=document.getElementById('tl-n').value.trim(),tle=document.getElementById('tl-e').value.trim();
-  await api('updateTL', {id:tlSid, tl, tlEmail:tle, changedBy:whoLabel(), changedAt:new Date().toISOString()});
   sch.tl=tl;sch.tlEmail=tle;
   cm('ov-tl');if(curSid===tlSid)rDS();rSch();rDash();toast('Team Leader updated');
+  try { await api('updateTL', {id:tlSid, tl, tlEmail:tle, changedBy:whoLabel(), changedAt:new Date().toISOString()}); } catch(e) {}
 }
 
 // ── REQUEST ──
@@ -1319,9 +1338,9 @@ function openReq(sid) {
 async function subReq() {
   const n=document.getElementById('rq-n').value.trim();if(!n){toast('Name required');return;}
   const r={id:'r'+Date.now(),sid:document.getElementById('rq-s').value,type:document.getElementById('rq-t').value,role:document.getElementById('rq-r').value,name:n,date:document.getElementById('rq-d').value,contact:document.getElementById('rq-c').value.trim(),notes:document.getElementById('rq-nt').value.trim(),status:'pending',sub:td()};
-  await api('addRequest', {data: r, changedBy: whoLabel()});
   db.requests.push(r);
   cm('ov-req');rReqs();document.getElementById('rqb').textContent=db.requests.filter(r=>r.status==='pending').length;toast('Request logged');
+  try { await api('addRequest', {data: r, changedBy: whoLabel()}); } catch(e) {}
 }
 
 // ── SEARCH ──
@@ -1372,6 +1391,68 @@ function cm(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3000);}
 
+// ── AUTO-SYNC ENGINE (cross-device updates) ──
+let _syncTimer = null;
+let _lastSynced = null;
+let _syncLabelTimer = null;
+
+function _updateSyncLabel() {
+  const el = document.getElementById('sync-time');
+  if(!el || !_lastSynced) return;
+  const secs = Math.round((Date.now() - _lastSynced) / 1000);
+  if(secs < 15)       el.textContent = 'Just synced';
+  else if(secs < 60)  el.textContent = secs + 's ago';
+  else if(secs < 120) el.textContent = '1m ago';
+  else                el.textContent = Math.round(secs/60) + 'm ago';
+}
+
+async function syncData(silent=true) {
+  if(!currentRole) return;
+  const btn = document.getElementById('nav-sync-btn');
+  if(btn) btn.classList.add('spinning');
+  try {
+    const payload = encodeURIComponent(JSON.stringify({action:'getData', role:currentRole}));
+    const res = IS_LOCAL ? handleLocal('getData') : await (await fetch(SCRIPT_URL+'?payload='+payload)).json();
+    if(res.error) throw new Error(res.error);
+    db.schools  = res.schools  || [];
+    db.staff    = res.staff    || [];
+    db.history  = res.history  || [];
+    db.requests = res.requests || [];
+    _lastSynced = Date.now();
+    _updateSyncLabel();
+    // Re-render whichever page is visible
+    const cur = document.querySelector('.pg.on')?.id?.replace('pg-','');
+    if(cur==='dashboard')  rDash();
+    else if(cur==='schools')   rSch();
+    else if(cur==='training')  { rTrain(); rDash(); }
+    else if(cur==='allowance') rAllow();
+    else if(cur==='facebook')  rFB();
+    else if(cur==='requests')  rReqs();
+    else if(cur==='audit')     rAudit();
+    // Always update nav badges
+    document.getElementById('rqb').textContent = db.requests.filter(r=>r.status==='pending').length;
+    document.getElementById('trb').textContent = tPend();
+  } catch(e) {
+    if(!silent) toast('Sync failed — check your connection');
+  } finally {
+    if(btn) btn.classList.remove('spinning');
+  }
+}
+
+async function manualSync() {
+  await syncData(false);
+  if(_lastSynced) toast('Data refreshed from Google Sheets');
+}
+
+function startAutoSync() {
+  if(_syncTimer)      clearInterval(_syncTimer);
+  if(_syncLabelTimer) clearInterval(_syncLabelTimer);
+  _lastSynced = Date.now();
+  _updateSyncLabel();
+  _syncLabelTimer = setInterval(_updateSyncLabel, 15000);   // update label every 15s
+  _syncTimer      = setInterval(() => syncData(true), 60000); // pull Sheets every 60s
+}
+
 // ── AUTO-RESTORE SESSION ON PAGE REFRESH ──
 (async function restoreSession() {
   const saved = sessionStorage.getItem('psm_role');
@@ -1386,6 +1467,7 @@ function toast(msg){const t=document.createElement('div');t.className='toast';t.
     document.getElementById('main-nav').style.display = 'flex';
     setupRoleUI();
     rDash();
+    startAutoSync();
   } catch(e) {
     sessionStorage.removeItem('psm_role');
     currentRole = null;
